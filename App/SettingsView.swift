@@ -5,7 +5,7 @@ struct SettingsView: View {
     let states: [ReviewState]
     let events: [ReviewEvent]
     @Environment(\.modelContext) private var context
-    @AppStorage("dailyGoal") private var goal = 5
+    @AppStorage("dailyGoal") private var goal = DailyGoal.defaultValue
     @AppStorage(TapCue.preferenceKey) private var tapSounds = TapCue.enabledByDefault
     @AppStorage("voice") private var voice = EnglishAccent.american.rawValue
     @AppStorage("slowPronunciation") private var slowPronunciation = false
@@ -21,7 +21,11 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("تمرین") {
-                    Stepper("واژهٔ تازه در روز: \(fa(goal))", value: $goal, in: 0...30)
+                    Picker("هدف روزانه", selection: $goal) {
+                        ForEach(DailyGoal.choices(including: goal), id: \.self) { count in
+                            Text(count == 0 ? "فقط مرور" : "\(fa(count)) واژهٔ جدید").tag(count)
+                        }
+                    }
                     Toggle("صدای لمس", isOn: $tapSounds)
                         .onChange(of: tapSounds) { _, enabled in
                             if enabled {

@@ -1,6 +1,6 @@
 # واژه · English vocabulary for Persian speakers
 
-A native, offline SwiftUI prototype for iPhone on iOS 18 or later. The first version contains 100 provisional English–Persian cards.
+A native, offline SwiftUI prototype for iPhone on iOS 18 or later. The starter collection contains 100 English–Persian cards.
 
 ## Run on an iPhone
 
@@ -26,6 +26,17 @@ Replace `App/vocabulary.json` with the reviewed entries in the same format. Keep
 
 The current levels are provisional. IPA fields are blank pending phonetic review. Pronunciation is available through the system speech voice when supported.
 
-## Prototype review policy
+## Daily study and review
 
-The default daily goal is five new words and can be set to zero. Due reviews appear first. A forgotten card returns once after up to two other cards when possible, and is due again after ten minutes if it stays unresolved. Hard schedules a review in one to seven days. Good starts at two days and doubles the previous interval up to 90 days. Three consecutive Good ratings mark strong review performance.
+The default goal is ten new words per day. Choose five, ten, twenty, thirty, or review-only from Today or Settings. The app preserves previously saved goals. The daily count follows the device’s local calendar, and due reviews are available independently of the goal. When fewer new cards remain, the display adjusts to the available collection.
+
+Due reviews come before new words. The scheduler uses expanding intervals with these MVP defaults:
+
+- **Again** schedules a check ten minutes later and can retry the card once in the current session. An early successful retry leaves the ten-minute deadline in place.
+- **Hard** holds the current interval with a minimum of one day.
+- **Good** starts at two days and doubles the previous interval, up to 90 days.
+- **Easy** starts at four days and triples the previous interval, up to 90 days.
+
+Mastery requires a current interval of at least eight days, a streak of at least three confident recalls, and a current run of confident recalls on three distinct local dates spanning at least six days. Two misses among the last five ratings flag a card as difficult until it recovers with two confident recalls or the misses age out of that window. These thresholds are the app’s rules for reporting progress.
+
+The existing SwiftData store keeps the same persisted fields and card IDs. Early retries, review state, and history use the existing data model. Optional recall sessions and multiple-choice quizzes leave scheduling and mastery data alone. An interrupted session keeps its saved ratings. Today reconstructs the remaining work when the app reopens.

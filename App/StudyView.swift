@@ -21,14 +21,19 @@ struct StudyView: View {
                     ProgressView(value: Double(queue.count), total: Double(queue.count + queue.cards.count))
                         .progressViewStyle(StudyProgressStyle())
                         .accessibilityLabel("پیشرفت تمرین")
+                    if !session.isRevealed, session.lastRating == .again {
+                        HStack {
+                            ElephantMascot(mood: .encouraging).frame(width: 34, height: 30)
+                            Text("اشکالی ندارد. آرام ادامه بده.")
+                                .font(PersianFont.subheadline)
+                                .foregroundStyle(Palette.muted)
+                        }
+                    }
                     CardContent(card: card, revealed: session.isRevealed).id(session.attemptID)
                     if session.isRevealed {
                         let currentAttempt = session.attemptID
                         Text("چقدر خوب به یاد آوردی؟").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
-                        ForEach(Rating.allCases, id: \.self) { rating in
-                            Button(rating.label) { record(rating, attemptID: currentAttempt) }
-                                .buttonStyle(rating == .good ? AnyStudyButton.primary : .secondary)
-                        }
+                        ratingButtons(attemptID: currentAttempt)
                     } else {
                         Button("نمایش معنی") {
                             TapCue.reveal.play()
@@ -37,26 +42,63 @@ struct StudyView: View {
                         .buttonStyle(PrimaryButton())
                     }
                 } else {
-                    Heading(title: "تمرین تمام شد", subtitle: "آفرین! مرور بعدی به تثبیت واژه‌ها کمک می‌کند.")
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("\(fa(session.newCardsPracticed)) واژهٔ جدید تمرین شد")
-                        Text("\(fa(session.queue.count)) مرور انجام شد")
+                    VStack(alignment: .leading, spacing: 12) {
+                        ElephantMascot(mood: .celebrating).frame(width: 76, height: 66)
+                        Heading(title: "تمرین تمام شد",
+                                subtitle: session.plan.mode == .practice
+                                    ? "تمرین اختیاری تمام شد. زمان مرورها تغییری نکرد."
+                                    : "آفرین! مرورهای بعدی طبق برنامه پیش می‌روند.")
+                        if session.plan.mode == .scheduled {
+                            Text("\(fa(session.newCardsPracticed)) واژهٔ تازه تمرین شد")
+                            Text("\(fa(session.successfulReviews)) واژهٔ مرورشده را به یاد آوردی")
+                        } else {
+                            Text("\(fa(session.queue.successful.count)) واژه را به یاد آوردی")
+                        }
                         Text("\(fa(session.queue.needsPractice.count)) واژه برای تمرین بیشتر")
                     }
                     .modifier(Panel(fill: Palette.tint))
                     Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
                 }
             }
-            .persianNavigationTitle("تمرین واژه‌ها")
+            .id(session.attemptID)
+            .persianNavigationTitle(session.plan.mode == .practice ? "تمرین اختیاری" : "تمرین واژه‌ها")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("بستن") { dismiss() } } }
         }
         .alert("ذخیرهٔ مرور ممکن نشد", isPresented: $failed) { Button("باشه", role: .cancel) {} }
+    }
+
+    private func ratingButtons(attemptID: UUID) -> some View {
+        ViewThatFits(in: .horizontal) {
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    ratingButton(.again, attemptID: attemptID)
+                    ratingButton(.hard, attemptID: attemptID)
+                }
+                HStack(spacing: 8) {
+                    ratingButton(.good, attemptID: attemptID)
+                    ratingButton(.easy, attemptID: attemptID)
+                }
+            }
+            VStack(spacing: 8) {
+                ForEach(Rating.allCases, id: \.self) { rating in
+                    ratingButton(rating, attemptID: attemptID)
+                }
+            }
+        }
+    }
+
+    private func ratingButton(_ rating: Rating, attemptID: UUID) -> some View {
+        Button(rating.label) { record(rating, attemptID: attemptID) }
+            .buttonStyle(rating == .good ? AnyStudyButton.primary : .secondary)
+            .accessibilityHint(rating == .again ? "این واژه به تمرین بیشتری نیاز دارد" : "")
     }
 
     private func record(_ rating: Rating, attemptID: UUID) {
         do {
             try session.submit(rating, for: attemptID) { card, rating, id in
                 try ReviewStore.record(card, rating: rating, attemptID: id, date: .now, in: context)
+            }
+            if session.attemptID != attemptID {
                 (rating == .again ? TapCue.retry : .rate).play()
             }
         } catch { failed = true }
@@ -72,7 +114,9 @@ private enum AnyStudyButton: ButtonStyle {
             PrimaryButton().makeBody(configuration: configuration)
         case .secondary:
             configuration.label.font(PersianFont.emphasis)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .multilineTextAlignment(.center)
+                .padding(12)
+                .frame(maxWidth: .infinity, minHeight: 52)
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: 16))
                 .opacity(configuration.isPressed ? 0.7 : 1)
         }
@@ -107,9 +151,14 @@ struct QuizView: View {
                         }
                     }
                     if let selected = quiz.selected {
-                        Text(selected == question.card.meaningFa ? "درست بود!" : "پاسخ درست: \(question.card.meaningFa)")
-                            .font(HeadingFont.section)
-                            .accessibilityAddTraits(.isHeader)
+                        let correct = selected == question.card.meaningFa
+                        HStack {
+                            ElephantMascot(mood: correct ? .happy : .encouraging)
+                                .frame(width: 38, height: 36)
+                            Text(correct ? "درست بود!" : "پاسخ درست: \(question.card.meaningFa)")
+                                .font(HeadingFont.section)
+                                .accessibilityAddTraits(.isHeader)
+                        }
                         examples(for: question.card)
                         Button(quiz.index + 1 == quiz.questions.count ? "دیدن نتیجه" : "پرسش بعدی") {
                             TapCue.advance.play()
@@ -119,6 +168,21 @@ struct QuizView: View {
                     }
                 } else {
                     QuizResultView(correct: quiz.correctCount, total: quiz.questions.count)
+                    if !quiz.missedCards.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("واژه‌هایی برای تمرین بیشتر")
+                                .font(HeadingFont.section).accessibilityAddTraits(.isHeader)
+                            ForEach(quiz.missedCards) { card in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(card.word).font(.system(.headline, design: .serif))
+                                        .environment(\.layoutDirection, .leftToRight)
+                                    Text(card.meaningFa).foregroundStyle(Palette.muted)
+                                }
+                                .accessibilityElement(children: .combine)
+                            }
+                        }
+                        .modifier(Panel())
+                    }
                     Button("بازگشت به امروز") { dismiss() }
                         .buttonStyle(PrimaryButton())
                 }
@@ -191,7 +255,7 @@ private struct QuizResultView: View {
                     .stroke(Palette.sage, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .padding(2)
-                ElephantMascot()
+                ElephantMascot(mood: perfect ? .celebrating : .happy)
                     .frame(width: 100, height: 100)
                     .scaleEffect(entered || reduceMotion ? 1 : 0.72)
             }

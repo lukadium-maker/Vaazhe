@@ -13,7 +13,7 @@ final class VaazheTests: XCTestCase {
         let hard = new.rated(.hard, at: now, calendar: calendar)
         let good = new.rated(.good, at: now, calendar: calendar)
         XCTAssertGreaterThan(good.due, hard.due)
-        XCTAssertEqual(good.rated(.good, at: now, calendar: calendar).days, 4)
+        XCTAssertEqual(good.rated(.good, at: good.due, calendar: calendar).days, 4)
         let again = good.rated(.again, at: now, calendar: calendar)
         XCTAssertEqual(again.streak, 0)
         XCTAssertEqual(again.due.timeIntervalSince(now), 600)
@@ -84,6 +84,121 @@ final class VaazheTests: XCTestCase {
         XCTAssertEqual(session.queue.count, 1)
     }
 
+    func testShortLearningStepAndExpandingIntervals() {
+        let calendar = Calendar(identifier: .gregorian)
+        let old = Schedule(days: 80, streak: 4, due: now)
+        let missed = old.rated(.again, at: now, calendar: calendar)
+        let early = now.addingTimeInterval(60)
+        XCTAssertEqual(missed.rated(.good, at: early, calendar: calendar), missed)
+        XCTAssertEqual(missed.rated(.easy, at: early, calendar: calendar), missed)
+        XCTAssertEqual(missed.rated(.good, at: missed.due, calendar: calendar).days, 2)
+        XCTAssertEqual(missed.rated(.easy, at: missed.due, calendar: calendar).days, 4)
+        XCTAssertEqual(old.rated(.good, at: now, calendar: calendar).days, 90)
+        XCTAssertEqual(old.rated(.hard, at: now, calendar: calendar).days, 80)
+    }
+
+    func testFirstLaunchAndChangingGoal() {
+        let calendar = Calendar(identifier: .gregorian)
+        let cards = (0..<13).map { index in
+            var item = card
+            item.id = "word-\(index)"
+            return item
+        }
+        let first = StudyPlanner(cards: cards, progress: [:], goal: DailyGoal.defaultValue,
+                                 at: now, calendar: calendar)
+        XCTAssertEqual(first.nextAction, .learn)
+        XCTAssertEqual(first.newCards.count, 10)
+        XCTAssertEqual(first.remainingNew, 13)
+        XCTAssertEqual(first.status[cards[0].id]?.stage, .new)
+        XCTAssertEqual(DailyGoal.choices(including: 17), [0, 5, 10, 17, 20, 30])
+
+        let state = [cards[0].id: StudyPlanner.Progress(introduced: now, due: now.addingTimeInterval(600))]
+        let changed = StudyPlanner(cards: cards, progress: state, goal: 5, at: now, calendar: calendar)
+        XCTAssertEqual(changed.newCards.count, 4)
+        XCTAssertEqual(changed.nextAction, .continueStudy)
+        XCTAssertEqual(changed.introducedToday, 1)
+        XCTAssertEqual(changed.scheduledToday, 1)
+        XCTAssertTrue(changed.dueCards.isEmpty)
+        let tomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now)!)
+        let nextDay = StudyPlanner(cards: cards, progress: state, goal: 5, at: tomorrow, calendar: calendar)
+        XCTAssertEqual(nextDay.introducedToday, 0)
+        XCTAssertEqual(nextDay.newCards.count, 5)
+        XCTAssertEqual(nextDay.dueCards.map(\.id), [cards[0].id])
+        XCTAssertEqual(nextDay.nextAction, .mixed)
+    }
+
+    func testCompletedDailyWorkOffersPracticeAndKeepsFutureReviewsSeparate() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let future = calendar.date(byAdding: .day, value: 2, to: now)!
+        let state = [card.id: StudyPlanner.Progress(introduced: now, due: future, days: 2, streak: 1)]
+        let complete = StudyPlanner(cards: [card], progress: state, goal: 10, at: now, calendar: calendar)
+        XCTAssertEqual(complete.effectiveGoal, 1)
+        XCTAssertEqual(complete.remainingNew, 0)
+        XCTAssertEqual(complete.nextAction, .practice)
+        XCTAssertNil(complete.dailyPlan)
+        XCTAssertEqual(complete.nextDue, future)
+        XCTAssertEqual(complete.scheduledToday, 0)
+        let plan = try XCTUnwrap(complete.optionalPlan(for: complete.practicedCards))
+        var session = StudySession(plan: plan)
+        session.reveal()
+        session.submit(.again, for: session.attemptID) { _, _, _ in
+            XCTFail("Optional practice tried to reschedule the word")
+        }
+        XCTAssertNil(session.currentCard)
+        XCTAssertEqual(session.queue.needsPractice, [card.id])
+        XCTAssertEqual(session.newCardsPracticed, 0)
+
+        let due = StudyPlanner(cards: [card], progress: state, goal: 0, at: future, calendar: calendar)
+        XCTAssertEqual(due.nextAction, .review)
+        XCTAssertEqual(due.dailyPlan?.cards.map(\.id), [card.id])
+    }
+
+    func testEmptyDeckAndReviewOnlyHaveUsefulPaths() {
+        let calendar = Calendar(identifier: .gregorian)
+        let empty = StudyPlanner(cards: [], progress: [:], goal: 10, at: now, calendar: calendar)
+        XCTAssertEqual(empty.nextAction, .browse)
+        XCTAssertNil(empty.optionalPlan(for: [card]))
+        let noNew = StudyPlanner(cards: [card], progress: [:], goal: 0, at: now, calendar: calendar)
+        XCTAssertEqual(noNew.nextAction, .setGoal)
+        XCTAssertNil(noNew.dailyPlan)
+        XCTAssertNil(noNew.optionalPlan(for: [card]))
+    }
+
+    func testMasteryRequiresSpacedRecallAndDifficultyCanOverlapLearning() {
+        let calendar = Calendar(identifier: .gregorian)
+        let state = StudyPlanner.Progress(introduced: now, due: now, days: 8, streak: 3)
+        func recall(_ rating: Rating, daysAgo: Int) -> Recall {
+            Recall(cardID: card.id, date: calendar.date(byAdding: .day, value: -daysAgo, to: now)!,
+                   rating: rating)
+        }
+        let quick = [recall(.good, daysAgo: 0), recall(.easy, daysAgo: 0), recall(.good, daysAgo: 0)]
+        XCTAssertEqual(VocabularyStatus(progress: state, recalls: quick, calendar: calendar).stage, .learning)
+        let spaced = [recall(.good, daysAgo: 0), recall(.good, daysAgo: 4), recall(.good, daysAgo: 6)]
+        XCTAssertEqual(VocabularyStatus(progress: state, recalls: spaced, calendar: calendar).stage, .mastered)
+        let lapsed = [recall(.again, daysAgo: 0), recall(.again, daysAgo: 1)] + spaced.dropFirst()
+        let status = VocabularyStatus(progress: state, recalls: lapsed, calendar: calendar)
+        XCTAssertEqual(status.stage, .learning)
+        XCTAssertTrue(status.isDifficult)
+    }
+
+    @MainActor func testRetryKeepsShortDueDateAndEarlyScheduledSubmissionDoesNotDuplicate() throws {
+        let container = try ModelContainer(for: PersonalCard.self, ReviewState.self, ReviewEvent.self,
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = container.mainContext
+        try ReviewStore.record(card, rating: .again, attemptID: UUID(), date: now, in: context)
+        try ReviewStore.record(card, rating: .good, attemptID: UUID(), date: now.addingTimeInterval(30), in: context)
+        let state = try XCTUnwrap(context.fetch(FetchDescriptor<ReviewState>()).first)
+        XCTAssertEqual(state.due, now.addingTimeInterval(600))
+        XCTAssertEqual(state.streak, 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ReviewEvent>()), 2)
+        let due = state.due
+        try ReviewStore.record(card, rating: .easy, attemptID: UUID(), date: due, in: context)
+        try ReviewStore.record(card, rating: .again, attemptID: UUID(), date: due, in: context)
+        XCTAssertEqual(state.days, 4)
+        XCTAssertEqual(state.streak, 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ReviewEvent>()), 3)
+    }
+
     @MainActor func testProgressAndCustomCardSurviveReopeningAndDeduplicate() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -103,7 +218,14 @@ final class VaazheTests: XCTestCase {
         defer { withExtendedLifetime(reopenedContainer) {} }
         let reopened = reopenedContainer.mainContext
         XCTAssertEqual(try reopened.fetchCount(FetchDescriptor<ReviewEvent>()), 1)
-        XCTAssertEqual(try reopened.fetch(FetchDescriptor<ReviewState>()).first?.streak, 1)
+        let restored = try XCTUnwrap(reopened.fetch(FetchDescriptor<ReviewState>()).first)
+        XCTAssertEqual(restored.streak, 1)
+        XCTAssertEqual(restored.introduced, now)
+        XCTAssertEqual(restored.days, 2)
+        XCTAssertEqual(restored.due, Calendar.current.date(byAdding: .day, value: 2, to: now))
+        let event = try XCTUnwrap(reopened.fetch(FetchDescriptor<ReviewEvent>()).first)
+        XCTAssertEqual(event.rating, "good")
+        XCTAssertEqual(event.recall?.rating, .good)
         XCTAssertEqual(try reopened.fetch(FetchDescriptor<PersonalCard>()).first?.card.word, card.word)
     }
 }
@@ -196,6 +318,23 @@ final class QuizTests: XCTestCase {
         ).isEmpty)
     }
 
+    func testQuizSkipsDuplicateHeadwordsAndAvoidsOtherKnownSenses() throws {
+        var random = SeededRandom()
+        var close = card("close", "بستن")
+        var nearby = card(" Close ", "نزدیک")
+        close.id = "close-verb"
+        nearby.id = "close-adjective"
+        let pool = [close, nearby, card("near", "نزدیک"), card("wait", "منتظر ماندن"),
+                    card("bring", "آوردن"), card("leave", "رفتن")]
+        let questions = QuizSession.makeQuestions(
+            practicedCards: [close, nearby], distractorPool: pool, limit: 10, using: &random
+        )
+        let question = try XCTUnwrap(questions.first)
+        XCTAssertEqual(questions.count, 1)
+        XCTAssertEqual(question.choices.count, 4)
+        XCTAssertFalse(question.choices.contains(question.card.id == close.id ? "نزدیک" : "بستن"))
+    }
+
     func testQuizGradesOnlyFirstValidChoiceAndCompletes() {
         let first = QuizQuestion(card: card("leave", "رفتن"), choices: ["رفتن", "ماندن", "نشستن", "ایستادن"])
         let second = QuizQuestion(card: card("wait", "منتظر ماندن"), choices: ["آوردن", "منتظر ماندن", "دیدن", "رفتن"])
@@ -215,5 +354,6 @@ final class QuizTests: XCTestCase {
         quiz.next()
         XCTAssertNil(quiz.currentQuestion)
         XCTAssertEqual(quiz.correctCount, 1)
+        XCTAssertEqual(quiz.missedCards.map(\.id), [first.id])
     }
 }

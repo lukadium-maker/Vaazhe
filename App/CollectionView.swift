@@ -5,6 +5,7 @@ struct CollectionView: View {
     let bundled: [Card]
     let personal: [PersonalCard]
     let states: [String: ReviewState]
+    let statuses: [String: VocabularyStatus]
     @State private var search = ""
     @State private var filter = "همه"
     @State private var adding = false
@@ -13,7 +14,7 @@ struct CollectionView: View {
         NavigationStack {
             List {
                 Picker("وضعیت یادگیری", selection: $filter) {
-                    ForEach(["همه", "جدید", "در حال یادگیری", "عملکرد قوی"], id: \.self) { Text($0) }
+                    ForEach(["همه", "جدید", "در حال یادگیری", "تثبیت‌شده", "دشوار"], id: \.self) { Text($0) }
                 }
                 .listRowBackground(Palette.card)
                 let personalMatches = personal.filter { matches($0.card) }
@@ -50,7 +51,7 @@ struct CollectionView: View {
 
     private func row(_ card: Card, personal: PersonalCard?) -> some View {
         NavigationLink {
-            DetailView(initial: card, item: personal, state: states[card.id])
+            DetailView(initial: card, item: personal, state: states[card.id], status: statuses[card.id])
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.word).font(.system(.title3, design: .serif))
@@ -66,11 +67,12 @@ struct CollectionView: View {
         let query = normalized(search.trimmingCharacters(in: .whitespacesAndNewlines))
         guard query.isEmpty || ([card.word, card.meaningFa] + card.alternativeMeaningsFa)
             .contains(where: { normalized($0).localizedCaseInsensitiveContains(query) }) else { return false }
-        let state = states[card.id]
+        let status = statuses[card.id]
         switch filter {
-        case "جدید": return state == nil
-        case "در حال یادگیری": return state.map { $0.streak < 3 } ?? false
-        case "عملکرد قوی": return state.map { $0.streak >= 3 } ?? false
+        case "جدید": return status?.stage == .new
+        case "در حال یادگیری": return status?.stage == .learning
+        case "تثبیت‌شده": return status?.stage == .mastered
+        case "دشوار": return status?.isDifficult == true
         default: return true
         }
     }
@@ -86,6 +88,7 @@ private struct DetailView: View {
     let initial: Card
     let item: PersonalCard?
     let state: ReviewState?
+    let status: VocabularyStatus?
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
@@ -96,6 +99,8 @@ private struct DetailView: View {
         Page {
             CardContent(card: item?.card ?? initial, revealed: true)
             if let state {
+                if status?.stage == .mastered { Text("تثبیت‌شده").foregroundStyle(Palette.sage) }
+                if status?.isDifficult == true { Text("نیاز به تمرین بیشتر").foregroundStyle(Palette.muted) }
                 Text("مرور بعدی").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
                 Text(state.due.formatted(.relative(presentation: .named)))
             } else {
