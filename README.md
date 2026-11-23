@@ -1,11 +1,11 @@
-# واژه · English vocabulary for Persian speakers
+# Elphy · English vocabulary for Persian speakers
 
-A native, offline SwiftUI prototype for iPhone on iOS 18 or later. The starter collection contains 100 English–Persian cards.
+A native, offline SwiftUI prototype for iPhone on iOS 18 or later. The bundled collection contains 150 English–Persian cards.
 
 ## Run on an iPhone
 
-1. Open `Vaazhe.xcodeproj` and select the **Vaazhe** scheme.
-2. Under the **Vaazhe** target’s **Signing & Capabilities**, select your Apple development team. If the bundle identifier is taken, change `com.example.vaazhe` to one you control.
+1. Open `Elphy.xcodeproj` and select the **Elphy** scheme.
+2. Under the **Elphy** target’s **Signing & Capabilities**, select your Apple development team. Keep the existing bundle identifier when updating an installation so iOS preserves its data.
 3. Connect and unlock your iPhone. If prompted, trust the Mac and enable Developer Mode on the iPhone.
 4. Choose the iPhone as the run destination and press **⌘R**. An iPhone simulator in Xcode also works for testing.
 5. From **امروز**, start a study session, reveal each card, and rate your recall. Relaunch the app to confirm that progress persists. Add a personal word from the **واژه‌ها** tab to see it prioritized for the next available new-card slot.
@@ -14,11 +14,11 @@ Press **⌘U** on an iPhone simulator to run the scheduler, session queue, and p
 
 ## Project layout
 
-- `App/VaazheApp.swift` contains the app entry point, Today, and Progress.
+- `App/ElphyApp.swift` contains the app entry point, Today, and Progress.
 - `App/StudyView.swift`, `App/CollectionView.swift`, and `App/SettingsView.swift` contain the main screens and editing flows.
 - `App/Design.swift` contains the palette and reusable SwiftUI components. Persian body text uses bundled Vazirmatn, and headings use bundled Lalezar.
 - `App/Vocabulary.swift` defines the deck format, scheduler, and study queue. `App/Storage.swift` holds SwiftData records and writes. `App/PronunciationService.swift` handles speech and `App/Services.swift` handles local reminders.
-- `App/vocabulary.json` is the bundled deck. `Tests/VaazheTests.swift` contains the unit tests.
+- `App/vocabulary.json` is the bundled deck. `Tests/ElphyTests.swift` contains the unit tests.
 
 ## Replace the starter deck
 

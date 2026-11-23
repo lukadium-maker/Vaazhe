@@ -12,6 +12,14 @@ struct StudyView: View {
         _session = State(initialValue: StudySession(plan: plan))
     }
 
+    private var title: String {
+        switch session.plan.mode {
+        case .scheduled: "تمرین واژه‌ها"
+        case .practice: "تمرین اختیاری"
+        case .difficult: "واژه‌های دشوار"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Page {
@@ -41,13 +49,18 @@ struct StudyView: View {
                         }
                         .buttonStyle(PrimaryButton())
                     }
+                } else if session.plan.mode == .difficult && session.plan.cards.isEmpty {
+                    Heading(title: "هنوز واژهٔ دشواری شناسایی نشده.",
+                            subtitle: "واژه‌هایی که در یادآوری آن‌ها مشکل داشته باشی، اینجا ظاهر می‌شوند.")
+                        .modifier(Panel(fill: Palette.tint))
+                    Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         ElephantMascot(mood: .celebrating).frame(width: 76, height: 66)
                         Heading(title: "تمرین تمام شد",
-                                subtitle: session.plan.mode == .practice
-                                    ? "تمرین اختیاری تمام شد. زمان مرورها تغییری نکرد."
-                                    : "آفرین! مرورهای بعدی طبق برنامه پیش می‌روند.")
+                                subtitle: session.plan.mode == .scheduled
+                                    ? "آفرین! مرورهای بعدی طبق برنامه پیش می‌روند."
+                                    : "آفرین که تمرین کردی! زمان مرورها تغییری نکرد.")
                         if session.plan.mode == .scheduled {
                             Text("\(fa(session.newCardsPracticed)) واژهٔ تازه تمرین شد")
                             Text("\(fa(session.successfulReviews)) واژهٔ مرورشده را به یاد آوردی")
@@ -61,7 +74,7 @@ struct StudyView: View {
                 }
             }
             .id(session.attemptID)
-            .persianNavigationTitle(session.plan.mode == .practice ? "تمرین اختیاری" : "تمرین واژه‌ها")
+            .persianNavigationTitle(title)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("بستن") { dismiss() } } }
         }
         .alert("ذخیرهٔ مرور ممکن نشد", isPresented: $failed) { Button("باشه", role: .cancel) {} }

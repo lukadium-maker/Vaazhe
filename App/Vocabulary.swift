@@ -136,7 +136,7 @@ struct StudyQueue {
 }
 
 struct StudyPlan: Identifiable {
-    enum Mode { case scheduled, practice }
+    enum Mode { case scheduled, practice, difficult }
 
     let id = UUID()
     let cards: [Card]
@@ -248,6 +248,10 @@ struct StudyPlanner {
         return StudyPlan(cards: dueCards + newCards, newIDs: Set(newCards.map(\.id)))
     }
 
+    var difficultPlan: StudyPlan {
+        StudyPlan(cards: difficultCards, newIDs: [], mode: .difficult)
+    }
+
     func optionalPlan(for cards: [Card], limit: Int = 10) -> StudyPlan? {
         guard limit > 0 else { return nil }
         let eligible = cards.filter {
@@ -283,6 +287,8 @@ struct StudySession {
     mutating func submit(_ rating: Rating, for attemptID: UUID,
                          save: (Card, Rating, UUID) throws -> Void) rethrows {
         guard isRevealed, self.attemptID == attemptID, let card = currentCard else { return }
+        // Optional ratings give feedback within the session. Scheduled review
+        // events remain the source of difficulty, mastery, and review statistics.
         if plan.mode == .scheduled { try save(card, rating, attemptID) }
         queue.advance(rating)
         lastRating = rating
