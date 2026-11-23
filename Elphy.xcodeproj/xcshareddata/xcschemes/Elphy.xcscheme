@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00000000000000000000001A"
-               BuildableName = "Vaazhe.app"
-               BlueprintName = "Vaazhe"
-               ReferencedContainer = "container:Vaazhe.xcodeproj">
+               BuildableName = "Elphy.app"
+               BlueprintName = "Elphy"
+               ReferencedContainer = "container:Elphy.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "000000000000000000000024"
-               BuildableName = "VaazheTests.xctest"
-               BlueprintName = "VaazheTests"
-               ReferencedContainer = "container:Vaazhe.xcodeproj">
+               BuildableName = "ElphyTests.xctest"
+               BlueprintName = "ElphyTests"
+               ReferencedContainer = "container:Elphy.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "00000000000000000000001A"
-            BuildableName = "Vaazhe.app"
-            BlueprintName = "Vaazhe"
-            ReferencedContainer = "container:Vaazhe.xcodeproj">
+            BuildableName = "Elphy.app"
+            BlueprintName = "Elphy"
+            ReferencedContainer = "container:Elphy.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "00000000000000000000001A"
-            BuildableName = "Vaazhe.app"
-            BlueprintName = "Vaazhe"
-            ReferencedContainer = "container:Vaazhe.xcodeproj">
+            BuildableName = "Elphy.app"
+            BlueprintName = "Elphy"
+            ReferencedContainer = "container:Elphy.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

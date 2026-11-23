@@ -13,10 +13,10 @@
 		00000000000000000000000F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000004 /* SettingsView.swift */; };
 		000000000000000000000010 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000005 /* Storage.swift */; };
 		000000000000000000000011 /* StudyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000006 /* StudyView.swift */; };
-		000000000000000000000012 /* VaazheApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000007 /* VaazheApp.swift */; };
+		000000000000000000000012 /* ElphyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000007 /* ElphyApp.swift */; };
 		000000000000000000000013 /* Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000008 /* Vocabulary.swift */; };
 		000000000000000000000015 /* vocabulary.json in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000009 /* vocabulary.json */; };
-		00000000000000000000001E /* VaazheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001B /* VaazheTests.swift */; };
+		00000000000000000000001E /* ElphyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001B /* ElphyTests.swift */; };
 		000000000000000000000102 /* PronunciationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000101 /* PronunciationService.swift */; };
 		000000000000000000000104 /* Lalezar-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000103 /* Lalezar-Regular.ttf */; };
 		000000000000000000000106 /* Lalezar-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000105 /* Lalezar-OFL.txt */; };
@@ -33,7 +33,7 @@
 			containerPortal = 00000000000000000000002A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 00000000000000000000001A;
-			remoteInfo = Vaazhe;
+			remoteInfo = Elphy;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -44,12 +44,12 @@
 		000000000000000000000004 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		000000000000000000000005 /* Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Storage.swift; sourceTree = "<group>"; };
 		000000000000000000000006 /* StudyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyView.swift; sourceTree = "<group>"; };
-		000000000000000000000007 /* VaazheApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaazheApp.swift; sourceTree = "<group>"; };
+		000000000000000000000007 /* ElphyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElphyApp.swift; sourceTree = "<group>"; };
 		000000000000000000000008 /* Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vocabulary.swift; sourceTree = "<group>"; };
 		000000000000000000000009 /* vocabulary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = vocabulary.json; sourceTree = "<group>"; };
-		00000000000000000000000B /* Vaazhe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Vaazhe.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		00000000000000000000001B /* VaazheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaazheTests.swift; sourceTree = "<group>"; };
-		00000000000000000000001D /* VaazheTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = VaazheTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		00000000000000000000000B /* Elphy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Elphy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		00000000000000000000001B /* ElphyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElphyTests.swift; sourceTree = "<group>"; };
+		00000000000000000000001D /* ElphyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ElphyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000101 /* PronunciationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PronunciationService.swift; sourceTree = "<group>"; };
 		000000000000000000000103 /* Lalezar-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Lalezar-Regular.ttf"; path = "Fonts/Lalezar-Regular.ttf"; sourceTree = "<group>"; };
 		000000000000000000000105 /* Lalezar-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = "Lalezar-OFL.txt"; path = "Fonts/Lalezar-OFL.txt"; sourceTree = "<group>"; };
@@ -72,7 +72,7 @@
 				000000000000000000000004 /* SettingsView.swift */,
 				000000000000000000000005 /* Storage.swift */,
 				000000000000000000000006 /* StudyView.swift */,
-				000000000000000000000007 /* VaazheApp.swift */,
+				000000000000000000000007 /* ElphyApp.swift */,
 				000000000000000000000008 /* Vocabulary.swift */,
 				000000000000000000000103 /* Lalezar-Regular.ttf */,
 				000000000000000000000113 /* Vazirmatn-Regular.ttf */,
@@ -90,7 +90,7 @@
 		00000000000000000000001C /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				00000000000000000000001B /* VaazheTests.swift */,
+				00000000000000000000001B /* ElphyTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -98,8 +98,8 @@
 		000000000000000000000025 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				00000000000000000000000B /* Vaazhe.app */,
-				00000000000000000000001D /* VaazheTests.xctest */,
+				00000000000000000000000B /* Elphy.app */,
+				00000000000000000000001D /* ElphyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -116,9 +116,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		00000000000000000000001A /* Vaazhe */ = {
+		00000000000000000000001A /* Elphy */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 000000000000000000000019 /* Build configuration list for PBXNativeTarget "Vaazhe" */;
+			buildConfigurationList = 000000000000000000000019 /* Build configuration list for PBXNativeTarget "Elphy" */;
 			buildPhases = (
 				000000000000000000000014 /* Sources */,
 				000000000000000000000016 /* Resources */,
@@ -127,14 +127,14 @@
 			);
 			dependencies = (
 			);
-			name = Vaazhe;
-			productName = Vaazhe;
-			productReference = 00000000000000000000000B /* Vaazhe.app */;
+			name = Elphy;
+			productName = Elphy;
+			productReference = 00000000000000000000000B /* Elphy.app */;
 			productType = "com.apple.product-type.application";
 		};
-		000000000000000000000024 /* VaazheTests */ = {
+		000000000000000000000024 /* ElphyTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 000000000000000000000023 /* Build configuration list for PBXNativeTarget "VaazheTests" */;
+			buildConfigurationList = 000000000000000000000023 /* Build configuration list for PBXNativeTarget "ElphyTests" */;
 			buildPhases = (
 				00000000000000000000001F /* Sources */,
 				000000000000000000000020 /* Resources */,
@@ -144,9 +144,9 @@
 			dependencies = (
 				00000000000000000000002C /* PBXTargetDependency */,
 			);
-			name = VaazheTests;
-			productName = VaazheTests;
-			productReference = 00000000000000000000001D /* VaazheTests.xctest */;
+			name = ElphyTests;
+			productName = ElphyTests;
+			productReference = 00000000000000000000001D /* ElphyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -158,7 +158,7 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2720;
 			};
-			buildConfigurationList = 000000000000000000000029 /* Build configuration list for PBXProject "Vaazhe" */;
+			buildConfigurationList = 000000000000000000000029 /* Build configuration list for PBXProject "Elphy" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = fa;
 			hasScannedForEncodings = 0;
@@ -172,8 +172,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				00000000000000000000001A /* Vaazhe */,
-				000000000000000000000024 /* VaazheTests */,
+				00000000000000000000001A /* Elphy */,
+				000000000000000000000024 /* ElphyTests */,
 			);
 		};
 /* End PBXProject section */
@@ -215,7 +215,7 @@
 				00000000000000000000000F /* SettingsView.swift in Sources */,
 				000000000000000000000010 /* Storage.swift in Sources */,
 				000000000000000000000011 /* StudyView.swift in Sources */,
-				000000000000000000000012 /* VaazheApp.swift in Sources */,
+				000000000000000000000012 /* ElphyApp.swift in Sources */,
 				000000000000000000000013 /* Vocabulary.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -224,7 +224,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				00000000000000000000001E /* VaazheTests.swift in Sources */,
+				00000000000000000000001E /* ElphyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,7 +233,7 @@
 /* Begin PBXTargetDependency section */
 		00000000000000000000002C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 00000000000000000000001A /* Vaazhe */;
+			target = 00000000000000000000001A /* Elphy */;
 			targetProxy = 00000000000000000000002B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -250,7 +250,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = App/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "واژه";
+				INFOPLIST_KEY_CFBundleDisplayName = Elphy;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				MARKETING_VERSION = 0.1;
@@ -270,7 +270,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = App/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "واژه";
+				INFOPLIST_KEY_CFBundleDisplayName = Elphy;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				MARKETING_VERSION = 0.1;
@@ -286,10 +286,10 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.vaazhe.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.elphy.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vaazhe.app/Vaazhe";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Elphy.app/Elphy";
 			};
 			name = Debug;
 		};
@@ -299,9 +299,9 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.vaazhe.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.elphy.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vaazhe.app/Vaazhe";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Elphy.app/Elphy";
 			};
 			name = Release;
 		};
@@ -394,7 +394,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		000000000000000000000019 /* Build configuration list for PBXNativeTarget "Vaazhe" */ = {
+		000000000000000000000019 /* Build configuration list for PBXNativeTarget "Elphy" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				000000000000000000000017 /* Debug */,
@@ -403,7 +403,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		000000000000000000000023 /* Build configuration list for PBXNativeTarget "VaazheTests" */ = {
+		000000000000000000000023 /* Build configuration list for PBXNativeTarget "ElphyTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				000000000000000000000021 /* Debug */,
@@ -412,7 +412,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		000000000000000000000029 /* Build configuration list for PBXProject "Vaazhe" */ = {
+		000000000000000000000029 /* Build configuration list for PBXProject "Elphy" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				000000000000000000000027 /* Debug */,

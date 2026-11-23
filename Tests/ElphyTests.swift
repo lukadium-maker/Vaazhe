@@ -1,8 +1,8 @@
 import XCTest
 import SwiftData
-@testable import Vaazhe
+@testable import Elphy
 
-final class VaazheTests: XCTestCase {
+final class ElphyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private let card = Card(id: "personal-test", word: "arrive", partOfSpeech: "verb", level: "",
                             meaningFa: "رسیدن", exampleEn: "", exampleFa: "", topic: "")
@@ -179,6 +179,112 @@ final class VaazheTests: XCTestCase {
         let status = VocabularyStatus(progress: state, recalls: lapsed, calendar: calendar)
         XCTAssertEqual(status.stage, .learning)
         XCTAssertTrue(status.isDifficult)
+    }
+
+    func testDifficultPracticeHasAnEmptyPlanForNewLearnersAndFivePracticedCards() {
+        let cards = (0..<6).map { index in
+            var item = card
+            item.id = "word-\(index)"
+            return item
+        }
+        let calendar = Calendar(identifier: .gregorian)
+        let firstLaunch = StudyPlanner(cards: cards, progress: [:], goal: 5, at: now, calendar: calendar)
+        XCTAssertEqual(firstLaunch.difficultPlan.mode, .difficult)
+        XCTAssertTrue(firstLaunch.difficultPlan.cards.isEmpty)
+        XCTAssertNil(StudySession(plan: firstLaunch.difficultPlan).currentCard)
+
+        let progress = Dictionary(uniqueKeysWithValues: cards.prefix(5).map {
+            ($0.id, StudyPlanner.Progress(introduced: now, due: now.addingTimeInterval(600)))
+        })
+        // A single miss on each card is not enough to classify a word.
+        let recalls = cards.prefix(5).map { Recall(cardID: $0.id, date: now, rating: .again) }
+        let afterFive = StudyPlanner(cards: cards, progress: progress, goal: 5, at: now,
+                                     calendar: calendar, recalls: recalls)
+        XCTAssertEqual(afterFive.introducedToday, 5)
+        XCTAssertEqual(afterFive.difficultPlan.mode, .difficult)
+        XCTAssertTrue(afterFive.difficultPlan.cards.isEmpty)
+    }
+
+    func testDifficultPracticeUsesRecallHistoryAcrossInactivityAndRecoversAfterTwoConfidentRecalls() {
+        let calendar = Calendar(identifier: .gregorian)
+        var other = card
+        other.id = "other"
+        let old = now.addingTimeInterval(-7 * 86_400)
+        let due = old.addingTimeInterval(600)
+        let progress: [String: StudyPlanner.Progress] = [
+            card.id: .init(introduced: old, due: due),
+            other.id: .init(introduced: old, due: due)
+        ]
+        let misses = [
+            Recall(cardID: card.id, date: old, rating: .again),
+            Recall(cardID: card.id, date: due, rating: .again),
+            Recall(cardID: other.id, date: old, rating: .again)
+        ]
+        func planner(at date: Date, with recalls: [Recall]) -> StudyPlanner {
+            StudyPlanner(cards: [card, other], progress: progress, goal: 5, at: date,
+                         calendar: calendar, recalls: recalls)
+        }
+        XCTAssertEqual(planner(at: due, with: misses).difficultPlan.cards.map(\.id), [card.id])
+        let afterAbsence = planner(at: now, with: misses)
+        XCTAssertEqual(afterAbsence.difficultPlan.cards.map(\.id), [card.id])
+        XCTAssertEqual(Set(afterAbsence.dueCards.map(\.id)), [card.id, other.id])
+        XCTAssertEqual(afterAbsence.introducedToday, 0)
+
+        let firstRecall = misses + [Recall(cardID: card.id, date: now, rating: .good)]
+        XCTAssertEqual(planner(at: now, with: firstRecall).difficultCards.map(\.id), [card.id])
+        let later = now.addingTimeInterval(2 * 86_400)
+        let recovered = planner(at: later, with: firstRecall + [Recall(cardID: card.id, date: later, rating: .easy)])
+        XCTAssertEqual(recovered.difficultPlan.mode, .difficult)
+        XCTAssertTrue(recovered.difficultPlan.cards.isEmpty)
+    }
+
+    @MainActor func testDifficultPracticeKeepsOverdueReviewAndRestoresDifficultyAfterRelaunch() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let schema = Schema([PersonalCard.self, ReviewState.self, ReviewEvent.self])
+        let configuration = ModelConfiguration(schema: schema, url: directory.appendingPathComponent("test.store"))
+        let firstMiss = now.addingTimeInterval(-86_400)
+        let secondMiss = firstMiss.addingTimeInterval(600)
+        let overdue = secondMiss.addingTimeInterval(600)
+
+        func planner(in context: ModelContext) throws -> StudyPlanner {
+            let state = try XCTUnwrap(context.fetch(FetchDescriptor<ReviewState>()).first)
+            let recalls = try context.fetch(FetchDescriptor<ReviewEvent>()).compactMap(\.recall)
+            XCTAssertEqual(recalls.count, 2)
+            XCTAssertEqual(state.introduced, firstMiss)
+            XCTAssertEqual(state.due, overdue)
+            XCTAssertEqual(state.days, 0)
+            XCTAssertEqual(state.streak, 0)
+            return StudyPlanner(cards: [card], progress: [card.id: state.progress], goal: 5, at: now,
+                                calendar: .current, recalls: recalls)
+        }
+
+        do {
+            let container = try ModelContainer(for: schema, configurations: [configuration])
+            let context = container.mainContext
+            try ReviewStore.record(card, rating: .again, attemptID: UUID(), date: firstMiss, in: context)
+            try ReviewStore.record(card, rating: .again, attemptID: UUID(), date: secondMiss, in: context)
+            let before = try planner(in: context)
+            var practice = StudySession(plan: before.difficultPlan)
+            XCTAssertFalse(practice.isRevealed)
+            XCTAssertEqual(practice.currentCard?.id, card.id)
+            practice.reveal()
+            practice.submit(.easy, for: practice.attemptID) { _, _, _ in
+                XCTFail("Difficult practice tried to record a scheduled review")
+            }
+            XCTAssertNil(practice.currentCard)
+            XCTAssertEqual(practice.queue.successful, [card.id])
+            XCTAssertEqual(practice.newCardsPracticed, 0)
+            let after = try planner(in: context)
+            XCTAssertEqual(after.introducedToday, before.introducedToday)
+            XCTAssertEqual(after.dailyPlan?.cards.map(\.id), [card.id])
+        }
+        let reopened = try ModelContainer(for: schema, configurations: [configuration])
+        let restored = try planner(in: reopened.mainContext)
+        XCTAssertEqual(restored.difficultPlan.cards.map(\.id), [card.id])
+        XCTAssertEqual(restored.dueCards.map(\.id), [card.id])
+        XCTAssertEqual(restored.introducedToday, 0)
     }
 
     func testReviewClockRefreshesAtTheExactDueTimeOrMidnight() throws {
