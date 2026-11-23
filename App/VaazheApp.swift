@@ -41,6 +41,7 @@ struct Library: View {
     @State private var selection: Destination = .today
     @State private var session: StudyPlan?
     @State private var quiz: QuizPresentation?
+    @State private var showsPractice = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var now = Date.now
@@ -136,7 +137,7 @@ struct Library: View {
 
             dailyPlanPanel(planner)
             masteryPanel(planner.mastery)
-            if !planner.practicedCards.isEmpty { optionalPracticePanel(planner) }
+            optionalPracticePanel(planner)
 
             if deck == nil {
                 Label("مجموعهٔ اصلی بارگیری نشد. واژه‌های شخصی در دسترس‌اند.", systemImage: "exclamationmark.circle")
@@ -255,40 +256,96 @@ struct Library: View {
     }
 
     private func optionalPracticePanel(_ planner: StudyPlanner) -> some View {
+        DisclosureGroup(isExpanded: $showsPractice) {
+            if showsPractice { practiceActivities(planner) }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("تمرین اختیاری").font(HeadingFont.section)
+                Text("آزمون چهارگزینه‌ای، مرور آزاد و تمرین واژه‌های دشوار")
+                    .font(PersianFont.subheadline)
+                    .foregroundStyle(Palette.muted)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .modifier(Panel())
+    }
+
+    private func practiceActivities(_ planner: StudyPlanner) -> some View {
         var random = SystemRandomNumberGenerator()
         let questions = QuizSession.makeQuestions(
             practicedCards: planner.practicedCards, distractorPool: cards, limit: 10, using: &random
         )
-        return Menu {
-            if !questions.isEmpty {
-                Button("آزمون چهارگزینه‌ای", systemImage: "checklist") {
-                    TapCue.open.play()
-                    quiz = QuizPresentation(session: QuizSession(questions: questions))
+        let hasPracticed = !planner.practicedCards.isEmpty
+        return VStack(alignment: .leading, spacing: 8) {
+            Divider()
+            if hasPracticed {
+                if !questions.isEmpty {
+                    Button {
+                        TapCue.open.play()
+                        quiz = QuizPresentation(session: QuizSession(questions: questions))
+                    } label: {
+                        practiceActivity("آزمون چهارگزینه‌ای", icon: "checklist",
+                                         detail: "معنی فارسی واژه‌هایی را که تمرین کرده‌ای انتخاب کن.")
+                    }
+                } else {
+                    practiceActivity("آزمون چهارگزینه‌ای", icon: "lock",
+                                     detail: "برای ساختن چهار گزینهٔ متفاوت، واژه‌های بیشتری لازم است.")
+                }
+                Button {
+                    startOptionalPractice(planner.practicedCards, planner: planner)
+                } label: {
+                    practiceActivity("مرور آزاد", icon: "rectangle.on.rectangle",
+                                     detail: "معنی واژه‌های آشنا را به یاد بیاور، بعد پاسخ را ببین.")
+                }
+                if let plan = planner.optionalPlan(for: planner.difficultCards) {
+                    Button { open(plan) } label: {
+                        practiceActivity("تمرین واژه‌های دشوار", icon: "arrow.counterclockwise")
+                    }
+                }
+                if !planner.masteredCards.isEmpty {
+                    Button {
+                        startOptionalPractice(planner.masteredCards, planner: planner)
+                    } label: {
+                        practiceActivity("تمرین واژه‌های تثبیت‌شده", icon: "checkmark.circle")
+                    }
+                }
+                Text("زمان مرورهای برنامه‌ریزی‌شده با این تمرین‌ها تغییر نمی‌کند.")
+                    .font(PersianFont.subheadline)
+                    .foregroundStyle(Palette.muted)
+            } else {
+                practiceActivity("آزمون چهارگزینه‌ای", icon: "lock")
+                practiceActivity("مرور آزاد", icon: "lock")
+                Text("بعد از تمرین اولین واژه، می‌توانی آزمون بدهی یا مرور آزاد را شروع کنی.")
+                    .font(PersianFont.subheadline)
+                    .foregroundStyle(Palette.muted)
+                Button {
+                    selection = .vocabulary
+                } label: {
+                    practiceActivity("دیدن مجموعهٔ واژه‌ها", icon: "book")
                 }
             }
-            if let plan = planner.optionalPlan(for: planner.difficultCards) {
-                Button("تمرین واژه‌های دشوار", systemImage: "arrow.counterclockwise") { open(plan) }
-            }
-            if !planner.masteredCards.isEmpty {
-                Button("تمرین واژه‌های تثبیت‌شده", systemImage: "checkmark.circle") {
-                    startOptionalPractice(planner.masteredCards, planner: planner)
-                }
-            }
-            Button("مرور آزاد", systemImage: "rectangle.on.rectangle") {
-                startOptionalPractice(planner.practicedCards, planner: planner)
-            }
-        } label: {
-            HStack {
-                Text("تمرین اختیاری").font(HeadingFont.section)
-                Spacer(minLength: 8)
-                Image(systemName: "ellipsis.circle").accessibilityHidden(true)
-            }
-            .foregroundStyle(Palette.sage)
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
         }
-        .accessibilityHint("انتخاب نوع تمرین؛ زمان مرورها تغییر نمی‌کند.")
-        .modifier(Panel())
+        .padding(.top, 6)
+        .buttonStyle(.plain)
+    }
+
+    private func practiceActivity(_ title: String, icon: String, detail: String? = nil) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(PersianFont.emphasis)
+                if let detail {
+                    Text(detail).font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+                }
+            }
+        } icon: {
+            Image(systemName: icon).accessibilityHidden(true)
+        }
+        .foregroundStyle(icon == "lock" ? Palette.muted : Palette.sage)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(icon == "lock" ? "هنوز در دسترس نیست" : "")
     }
 
     private func startOptionalPractice(_ pool: [Card], planner: StudyPlanner) {
