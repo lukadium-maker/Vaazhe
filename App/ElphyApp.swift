@@ -83,7 +83,10 @@ struct Library: View {
                 progress(planner)
             }
             Tab("تنظیمات", systemImage: "gearshape", value: Destination.settings) {
-                SettingsView(states: states, events: events)
+                SettingsView(states: states, events: events, readingContainer: readingContainer) {
+                    readingRecords = [:]
+                    dailyReading = nil
+                }
             }
         }
         .sheet(item: $session) { StudyView(plan: $0) }

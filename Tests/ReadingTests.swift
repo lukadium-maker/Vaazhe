@@ -40,6 +40,31 @@ final class ReadingTests: XCTestCase {
         }
     }
 
+    @MainActor func testReadingResetClearsCompletionAndAllowsFreshDailyPick() throws {
+        let (stories, _) = try load()
+        let original = stories[0]
+        let replacement = stories[1]
+        let ids = Set(stories.map(\.id))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("reading.store")
+        do {
+            let container = try ReadingStore.makeContainer(at: url)
+            let context = container.mainContext
+            _ = try ReadingStore.dailyStoryID(at: now, calendar: calendar, availableIDs: ids,
+                                             in: context) { _ in original.id }
+            try ReadingStore.complete(original, score: 3, at: now, in: context)
+            XCTAssertEqual(try ReadingStore.records(in: context)[original.id]?.completed, true)
+            try ReadingStore.reset(in: context)
+        }
+        let container = try ReadingStore.makeContainer(at: url)
+        let context = container.mainContext
+        XCTAssertTrue(try ReadingStore.records(in: context).isEmpty)
+        XCTAssertEqual(try ReadingStore.dailyStoryID(at: now, calendar: calendar, availableIDs: ids,
+                                                    in: context) { _ in replacement.id }, replacement.id)
+    }
+
     func testLevelAndReadFilters() throws {
         let (stories, _) = try load()
         for (filter, count) in [(ReadingFilter.all, 20), (.a1, 6), (.a2, 10), (.b1, 4), (.read, 0)] {
