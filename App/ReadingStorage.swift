@@ -48,6 +48,14 @@ import SwiftData
         })
     }
 
+    static func reset(in context: ModelContext) throws {
+        let progress = try context.fetch(FetchDescriptor<ReadingProgress>())
+        let picks = try context.fetch(FetchDescriptor<DailyReadingPick>())
+        for record in progress { context.delete(record) }
+        for pick in picks { context.delete(pick) }
+        try save(context)
+    }
+
     static func dailyStoryID(at date: Date, calendar: Calendar, availableIDs: Set<String>,
                              in context: ModelContext, select: (String?) -> String?) throws -> String? {
         let today = ReadingDay(at: date, calendar: calendar)

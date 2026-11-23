@@ -4,6 +4,8 @@ import SwiftData
 struct SettingsView: View {
     let states: [ReviewState]
     let events: [ReviewEvent]
+    let readingContainer: ModelContainer?
+    let onReadingReset: () -> Void
     @Environment(\.modelContext) private var context
     @AppStorage("dailyGoal") private var goal = DailyGoal.defaultValue
     @AppStorage(TapCue.preferenceKey) private var tapSounds = TapCue.enabledByDefault
@@ -66,10 +68,10 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Palette.paper)
             .persianNavigationTitle("تنظیمات")
-            .confirmationDialog("همهٔ مرورها و برنامهٔ یادگیری پاک شوند؟", isPresented: $confirming, titleVisibility: .visible) {
+            .confirmationDialog("پیشرفت یادگیری و داستان‌خوانی پاک شود؟", isPresented: $confirming, titleVisibility: .visible) {
                 Button("پاک کردن پیشرفت", role: .destructive) { reset() }
             } message: {
-                Text("واژه‌های شخصی‌ات حفظ می‌شوند.")
+                Text("مرورها، وضعیت مطالعه و امتیاز آزمون‌های داستان‌ها پاک می‌شوند. واژه‌های شخصی‌ات حفظ می‌شوند.")
             }
             .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                 Button("باشه", role: .cancel) { message = nil }
@@ -114,9 +116,19 @@ struct SettingsView: View {
     }
 
     private func reset() {
+        guard let readingContainer else {
+            message = "دسترسی به پیشرفت داستان‌خوانی ممکن نشد. برنامه را دوباره باز کن و امتحان کن."
+            return
+        }
+        do { try ReadingStore.reset(in: readingContainer.mainContext) }
+        catch {
+            message = "پاک کردن پیشرفت داستان‌خوانی ممکن نشد."
+            return
+        }
+        onReadingReset()
         for state in states { context.delete(state) }
         for event in events { context.delete(event) }
         do { try ReviewStore.save(context) }
-        catch { message = "پاک کردن پیشرفت ممکن نشد." }
+        catch { message = "پیشرفت داستان‌خوانی پاک شد، اما پاک کردن مرور واژه‌ها ممکن نشد. دوباره امتحان کن." }
     }
 }
