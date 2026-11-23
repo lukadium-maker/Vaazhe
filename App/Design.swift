@@ -26,6 +26,17 @@ func fa(_ number: Int) -> String {
     number.formatted(.number.locale(Locale(identifier: "fa_IR")))
 }
 
+struct ElephantMascot: View {
+    var finished = false
+
+    var body: some View {
+        Image(finished ? "ElephantFinished" : "ElephantFlashcard")
+            .resizable()
+            .scaledToFit()
+            .accessibilityHidden(true)
+    }
+}
+
 struct Page<Content: View>: View {
     let content: Content
 
