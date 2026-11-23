@@ -42,6 +42,7 @@ struct Library: View {
     @State private var session: StudyPlan?
     @State private var quiz: QuizPresentation?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var now = Date.now
 
     private var cards: [Card] { (deck ?? []) + personal.map(\.card) }
@@ -57,7 +58,7 @@ struct Library: View {
 
         TabView(selection: $selection) {
             Tab("امروز", systemImage: "sun.max", value: Destination.today) {
-                today(at: now, calendar: calendar, planner: planner)
+                today(at: now, planner: planner)
             }
             Tab("واژه‌ها", systemImage: "rectangle.on.rectangle", value: Destination.vocabulary) {
                 CollectionView(bundled: deck ?? [], personal: personal, states: index, statuses: planner.status)
@@ -96,9 +97,9 @@ struct Library: View {
                      at: date, calendar: calendar, recalls: recalls)
     }
 
-    private func today(at date: Date, calendar: Calendar, planner: StudyPlanner) -> some View {
-        let nextReview = nextReviewText(at: date, due: planner.nextDue, calendar: calendar)
-        let next = todayMessage(for: planner, nextReview: nextReview)
+    private func today(at date: Date, planner: StudyPlanner) -> some View {
+        let next = todayMessage(for: planner)
+        let title = Text(next.title).font(HeadingFont.title).accessibilityAddTraits(.isHeader)
         let mood: ElephantMascot.Mood = planner.nextAction != .practice ? .welcoming
             : planner.reachedGoalToday ? .happy : .resting
         let dateFormat = Date.FormatStyle(date: .complete, time: .omitted,
@@ -113,26 +114,27 @@ struct Library: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        Text(next.title).font(HeadingFont.title)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .accessibilityAddTraits(.isHeader)
-                        Spacer(minLength: 0)
-                        ElephantMascot(mood: mood).frame(width: 72, height: 66)
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(spacing: 8) {
+                        ElephantMascot(mood: mood).frame(width: 64, height: 58)
+                        title.multilineTextAlignment(.center)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        ElephantMascot(mood: mood).frame(width: 66, height: 60)
-                        Text(next.title).font(HeadingFont.title).accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: 12) {
+                        title
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ElephantMascot(mood: mood).frame(width: 64, height: 58)
                     }
                 }
-                Text(next.detail).foregroundStyle(Palette.muted)
+                if let detail = next.detail { Text(detail).foregroundStyle(Palette.muted) }
                 Button(next.button) { startNextAction() }
                     .buttonStyle(PrimaryButton())
             }
             .modifier(Panel(fill: Palette.tint))
 
-            dailyPlanPanel(planner, nextReview: planner.nextAction == .practice ? nil : nextReview)
+            dailyPlanPanel(planner)
             masteryPanel(planner.mastery)
             if !planner.practicedCards.isEmpty { optionalPracticePanel(planner) }
 
@@ -142,7 +144,7 @@ struct Library: View {
         }
     }
 
-    private func dailyPlanPanel(_ planner: StudyPlanner, nextReview: String?) -> some View {
+    private func dailyPlanPanel(_ planner: StudyPlanner) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             ViewThatFits(in: .horizontal) {
                 HStack { dailyHeading; Spacer(minLength: 4); dailyGoalPicker }
@@ -159,7 +161,6 @@ struct Library: View {
                 VStack(alignment: .leading, spacing: 7) { dailyStats(planner) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            if let nextReview { Text(nextReview).foregroundStyle(Palette.muted) }
             if deck != nil && planner.remainingStarter == 0 && planner.remainingNew > 0 {
                 Text("همهٔ واژه‌های مجموعهٔ آغازین را تمرین کرده‌ای.").foregroundStyle(Palette.muted)
             }
@@ -195,22 +196,7 @@ struct Library: View {
         Text("برنامهٔ امروز").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
     }
 
-    private func nextReviewText(at date: Date, due: Date?, calendar: Calendar) -> String? {
-        guard let due, due > date else { return nil }
-        let minutes = ReviewClock.minutesRemaining(until: due, at: date)
-        if minutes <= 60 { return "مرور بعدی تا \(fa(minutes)) دقیقهٔ دیگر آماده می‌شود." }
-        var persianCalendar = Calendar(identifier: .persian)
-        persianCalendar.timeZone = calendar.timeZone
-        let locale = Locale(identifier: "fa_IR")
-        let time = Date.FormatStyle(date: .omitted, time: .shortened,
-                                    locale: locale, calendar: persianCalendar, timeZone: calendar.timeZone)
-        let day = Date.FormatStyle(date: .abbreviated, time: .omitted,
-                                   locale: locale, calendar: persianCalendar, timeZone: calendar.timeZone)
-        let dayLabel = calendar.isDate(due, inSameDayAs: date) ? "امروز" : due.formatted(day)
-        return "مرور بعدی: \(dayLabel)، ساعت \(due.formatted(time))"
-    }
-
-    private func todayMessage(for planner: StudyPlanner, nextReview: String?) -> (title: String, detail: String, button: String) {
+    private func todayMessage(for planner: StudyPlanner) -> (title: String, detail: String?, button: String) {
         let new = "\(fa(planner.newCards.count)) واژهٔ جدید"
         let due = "\(fa(planner.dueCards.count)) واژه برای مرور"
         switch planner.nextAction {
@@ -234,7 +220,7 @@ struct Library: View {
             } else {
                 title = "فعلاً مرورِ آماده‌ای نداری"
             }
-            return (title, nextReview ?? "می‌توانی واژه‌های آشنا را دوباره تمرین کنی.", "تمرین بیشتر")
+            return (title, nil, "تمرین بیشتر")
         case .setGoal:
             return ("آمادهٔ یادگیری هستی؟", "برای شروع، تعداد واژه‌های جدید روزانه را انتخاب کن.", "انتخاب هدف روزانه")
         case .browse:

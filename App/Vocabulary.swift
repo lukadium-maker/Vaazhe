@@ -145,20 +145,10 @@ struct StudyPlan: Identifiable {
 }
 
 enum ReviewClock {
-    static func minutesRemaining(until due: Date, at date: Date) -> Int {
-        Int(ceil(max(0, due.timeIntervalSince(date)) / 60))
-    }
-
     static func nextRefresh(at date: Date, nextDue: Date?, calendar: Calendar) -> Date? {
         let midnight = calendar.dateInterval(of: .day, for: date)?.end
         guard let nextDue, nextDue > date else { return midnight }
-        var next = min(nextDue, midnight ?? nextDue)
-        let minutes = minutesRemaining(until: nextDue, at: date)
-        // More distant reviews display a date/time. Wake once at the hour
-        // threshold, then on countdown boundaries and at the exact due date.
-        let nextMinute = nextDue.addingTimeInterval(-60 * Double(min(60, minutes - 1)))
-        next = min(next, nextMinute)
-        return next
+        return min(nextDue, midnight ?? nextDue)
     }
 }
 

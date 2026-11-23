@@ -181,16 +181,14 @@ final class VaazheTests: XCTestCase {
         XCTAssertTrue(status.isDifficult)
     }
 
-    func testReviewCountdownRefreshesAtMinuteBoundaryAndExactDueTime() {
-        let calendar = Calendar(identifier: .gregorian)
-        let due = now.addingTimeInterval(126)
-        XCTAssertEqual(ReviewClock.minutesRemaining(until: due, at: now), 3)
-        XCTAssertEqual(ReviewClock.nextRefresh(at: now, nextDue: due, calendar: calendar),
-                       now.addingTimeInterval(6))
-        let finalMinute = due.addingTimeInterval(-1)
-        XCTAssertEqual(ReviewClock.minutesRemaining(until: due, at: finalMinute), 1)
-        XCTAssertEqual(ReviewClock.nextRefresh(at: finalMinute, nextDue: due, calendar: calendar), due)
-        XCTAssertEqual(ReviewClock.minutesRemaining(until: due, at: due.addingTimeInterval(1)), 0)
+    func testReviewClockRefreshesAtTheExactDueTimeOrMidnight() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let midnight = try XCTUnwrap(calendar.dateInterval(of: .day, for: now)?.end)
+        let due = midnight.addingTimeInterval(-126)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: due.addingTimeInterval(-1), nextDue: due, calendar: calendar), due)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: due, nextDue: due, calendar: calendar), midnight)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: due, nextDue: midnight.addingTimeInterval(60), calendar: calendar), midnight)
     }
 
     func testPlannerSeparatesOverdueLaterTodayAndTomorrowAndResetsAtMidnight() throws {
@@ -217,7 +215,7 @@ final class VaazheTests: XCTestCase {
         XCTAssertEqual(due.dueCards.count, 2)
         XCTAssertEqual(due.scheduledLaterToday, 0)
         XCTAssertEqual(ReviewClock.nextRefresh(at: dates[1], nextDue: due.nextDue, calendar: calendar),
-                       midnight.addingTimeInterval(-60))
+                       midnight)
         let tomorrow = StudyPlanner(cards: cards, progress: states, goal: 5, at: midnight, calendar: calendar)
         XCTAssertEqual(tomorrow.dueCards.count, 3)
         XCTAssertEqual(tomorrow.introducedToday, 0)
