@@ -25,6 +25,11 @@
 		000000000000000000000114 /* Vazirmatn-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000113 /* Vazirmatn-Regular.ttf */; };
 		000000000000000000000116 /* Vazirmatn-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000115 /* Vazirmatn-SemiBold.ttf */; };
 		000000000000000000000118 /* Vazirmatn-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000117 /* Vazirmatn-OFL.txt */; };
+		000000000000000000000221 /* Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000220 /* Reading.swift */; };
+		000000000000000000000223 /* ReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000222 /* ReadingStorage.swift */; };
+		000000000000000000000225 /* ReadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000224 /* ReadingView.swift */; };
+		000000000000000000000227 /* elfy-reading-stories-20.json in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000226 /* elfy-reading-stories-20.json */; };
+		000000000000000000000229 /* ReadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000228 /* ReadingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +64,11 @@
 		000000000000000000000113 /* Vazirmatn-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Vazirmatn-Regular.ttf"; path = "Fonts/Vazirmatn-Regular.ttf"; sourceTree = "<group>"; };
 		000000000000000000000115 /* Vazirmatn-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Vazirmatn-SemiBold.ttf"; path = "Fonts/Vazirmatn-SemiBold.ttf"; sourceTree = "<group>"; };
 		000000000000000000000117 /* Vazirmatn-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = "Vazirmatn-OFL.txt"; path = "Fonts/Vazirmatn-OFL.txt"; sourceTree = "<group>"; };
+		000000000000000000000220 /* Reading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reading.swift; sourceTree = "<group>"; };
+		000000000000000000000222 /* ReadingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStorage.swift; sourceTree = "<group>"; };
+		000000000000000000000224 /* ReadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingView.swift; sourceTree = "<group>"; };
+		000000000000000000000226 /* elfy-reading-stories-20.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = elfy-reading-stories-20.json; sourceTree = "<group>"; };
+		000000000000000000000228 /* ReadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -82,6 +92,10 @@
 				000000000000000000000107 /* Info.plist */,
 				000000000000000000000108 /* Assets.xcassets */,
 				000000000000000000000111 /* Cues */,
+				000000000000000000000220 /* Reading.swift */,
+				000000000000000000000222 /* ReadingStorage.swift */,
+				000000000000000000000224 /* ReadingView.swift */,
+				000000000000000000000226 /* elfy-reading-stories-20.json */,
 				000000000000000000000009 /* vocabulary.json */,
 			);
 			path = App;
@@ -90,6 +104,7 @@
 		00000000000000000000001C /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				000000000000000000000228 /* ReadingTests.swift */,
 				00000000000000000000001B /* ElphyTests.swift */,
 			);
 			path = Tests;
@@ -190,6 +205,7 @@
 				000000000000000000000106 /* Lalezar-OFL.txt in Resources */,
 				000000000000000000000109 /* Assets.xcassets in Resources */,
 				000000000000000000000112 /* Cues in Resources */,
+				000000000000000000000227 /* elfy-reading-stories-20.json in Resources */,
 				000000000000000000000015 /* vocabulary.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -216,6 +232,9 @@
 				000000000000000000000010 /* Storage.swift in Sources */,
 				000000000000000000000011 /* StudyView.swift in Sources */,
 				000000000000000000000012 /* ElphyApp.swift in Sources */,
+				000000000000000000000221 /* Reading.swift in Sources */,
+				000000000000000000000223 /* ReadingStorage.swift in Sources */,
+				000000000000000000000225 /* ReadingView.swift in Sources */,
 				000000000000000000000013 /* Vocabulary.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -224,6 +243,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				000000000000000000000229 /* ReadingTests.swift in Sources */,
 				00000000000000000000001E /* ElphyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -100,6 +100,12 @@ enum EnglishAccent: String, CaseIterable {
         synthesizer.speak(utterance)
     }
 
+    func stop(ifSpeaking text: String) {
+        guard currentUtterance?.speechString == text.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+        cancelUtterance()
+        releaseSession()
+    }
+
     private func cancelUtterance() {
         guard currentUtterance != nil else { return }
         currentUtterance = nil
