@@ -1,0 +1,1229 @@
+{
+  "metadata": {
+    "schemaVersion": 1,
+    "source": "elfy-vocabulary-export.json",
+    "vocabularyCount": 150,
+    "storyCount": 20,
+    "uniqueTargetWordsCovered": 104,
+    "coveragePercent": 69.3,
+    "notes": "All target word IDs verified against supplied vocabulary. Stories may also contain other vocabulary as supporting language; match counts are targets only. CEFR levels are editorial estimates; review by a language teacher before release."
+  },
+  "stories": [
+    {
+      "id": "elfy-reading-01",
+      "titleEn": "The Early Train",
+      "titleFa": "قطار صبح زود",
+      "level": "A1",
+      "targetWords": [
+        "arrive",
+        "early",
+        "station",
+        "ticket",
+        "wait",
+        "leave",
+        "meet"
+      ],
+      "textEn": "Mina has a ticket for the morning train. She leaves home early and walks to the station. Her friend Ali is not there yet, so she must wait. Soon, Ali arrives with two cups of tea. They meet near the big clock. The train is late, but they do not worry. They sit together and talk about their trip.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why does Mina wait at the station?",
+          "optionsEn": [
+            "The station is closed.",
+            "Ali has not arrived yet.",
+            "She lost her ticket.",
+            "She wants to buy food."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "علی هنوز به ایستگاه نرسیده است."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does Ali bring?",
+          "optionsEn": [
+            "Two cups of tea",
+            "A new passport",
+            "A heavy bag",
+            "Two books"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "علی دو فنجان چای می‌آورد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Where do they meet?",
+          "optionsEn": [
+            "At the airport",
+            "In a café",
+            "Near the big clock",
+            "Outside Mina’s house"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "آن‌ها نزدیک ساعت بزرگ همدیگر را می‌بینند."
+        }
+      ],
+      "targetWordIds": [
+        "en-arrive-verb",
+        "en-early-adverb",
+        "en-station-noun",
+        "en-ticket-noun",
+        "en-wait-verb",
+        "en-leave-verb",
+        "en-meet-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-02",
+      "titleEn": "Breakfast for Two",
+      "titleFa": "صبحانه برای دو نفر",
+      "level": "A1",
+      "targetWords": [
+        "cook",
+        "breakfast",
+        "bread",
+        "drink",
+        "bring",
+        "enjoy",
+        "together"
+      ],
+      "textEn": "It is Sunday, and Neda wants to cook breakfast for her father. She puts bread on the table and makes eggs. Her father brings fresh fruit from the kitchen. They drink tea and eat together. Neda asks about his week. He tells her a funny story, and they laugh. They enjoy a quiet morning at home before the day becomes busy.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Who is Neda cooking for?",
+          "optionsEn": [
+            "Her teacher",
+            "Her father",
+            "Her neighbor",
+            "Her brother"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "ندا برای پدرش صبحانه آماده می‌کند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does her father bring?",
+          "optionsEn": [
+            "Fresh fruit",
+            "Coffee",
+            "A book",
+            "A ticket"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "پدرش میوهٔ تازه می‌آورد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "How do they spend the morning?",
+          "optionsEn": [
+            "Working outside",
+            "Arguing",
+            "Eating and talking together",
+            "Going shopping"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "آن‌ها با هم صبحانه می‌خورند و صحبت می‌کنند."
+        }
+      ],
+      "targetWordIds": [
+        "en-cook-verb",
+        "en-breakfast-noun",
+        "en-bread-noun",
+        "en-drink-verb",
+        "en-bring-verb",
+        "en-enjoy-verb",
+        "en-together-adverb"
+      ]
+    },
+    {
+      "id": "elfy-reading-03",
+      "titleEn": "The Missing Bag",
+      "titleFa": "کیف گمشده",
+      "level": "A1",
+      "targetWords": [
+        "find",
+        "remember",
+        "help",
+        "open",
+        "close",
+        "need"
+      ],
+      "textEn": "Farid is ready to leave, but he cannot find his bag. He opens the bedroom door and looks under the bed. He checks the kitchen, too. His sister offers to help. “Try to remember where you sat last night,” she says. Farid goes to the sofa and sees his bag behind it. He closes the door and smiles. Now he only needs to find his shoes.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Where does Farid find his bag?",
+          "optionsEn": [
+            "Under the bed",
+            "Behind the sofa",
+            "In the kitchen",
+            "Outside the house"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "کیف پشت مبل است."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Who offers to help?",
+          "optionsEn": [
+            "His sister",
+            "His father",
+            "A customer",
+            "A driver"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "خواهرش پیشنهاد کمک می‌دهد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Farid still need to find?",
+          "optionsEn": [
+            "His ticket",
+            "His phone",
+            "His shoes",
+            "His book"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "او هنوز باید کفش‌هایش را پیدا کند."
+        }
+      ],
+      "targetWordIds": [
+        "en-find-verb",
+        "en-remember-verb",
+        "en-help-verb",
+        "en-open-verb",
+        "en-close-verb",
+        "en-need-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-04",
+      "titleEn": "A Small Bookshop",
+      "titleFa": "کتاب‌فروشی کوچک",
+      "level": "A1",
+      "targetWords": [
+        "choose",
+        "learn",
+        "dictionary",
+        "question",
+        "spell",
+        "repeat"
+      ],
+      "textEn": "Sara visits a small bookshop because she wants to learn English. She needs a dictionary, but there are many different books. She asks the shopkeeper a question about beginner dictionaries. He shows her a simple one with pictures. Sara tries to spell a new word and asks him to repeat its sound. She decides to choose the small dictionary and begins studying that evening.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why does Sara visit the shop?",
+          "optionsEn": [
+            "To buy a dictionary",
+            "To meet her sister",
+            "To buy a ticket",
+            "To find a job"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "سارا برای خرید فرهنگ لغت به کتاب‌فروشی می‌رود."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What is special about the dictionary she chooses?",
+          "optionsEn": [
+            "It is very old.",
+            "It has pictures.",
+            "It is in French.",
+            "It has no words."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "فرهنگ لغت تصاویر دارد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "When does Sara begin studying?",
+          "optionsEn": [
+            "The next week",
+            "At midnight",
+            "That evening",
+            "Before breakfast"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "او همان عصر مطالعه را شروع می‌کند."
+        }
+      ],
+      "targetWordIds": [
+        "en-choose-verb",
+        "en-learn-verb",
+        "en-dictionary-noun",
+        "en-question-noun",
+        "en-spell-verb",
+        "en-repeat-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-05",
+      "titleEn": "The Friendly Customer",
+      "titleFa": "مشتری خوش‌برخورد",
+      "level": "A1",
+      "targetWords": [
+        "customer",
+        "price",
+        "pay",
+        "choose",
+        "help",
+        "careful"
+      ],
+      "textEn": "An older customer enters a clothing shop and asks for a warm jacket. The worker shows her three colors. She cannot choose, so he asks what she likes. She picks the blue jacket and checks the price. It costs less than she expected. The worker is careful when he packs it. She thanks him for his help and pays with her card.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What does the customer want?",
+          "optionsEn": [
+            "A warm jacket",
+            "A pair of shoes",
+            "A blue hat",
+            "A new phone"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "مشتری یک کاپشن گرم می‌خواهد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Which jacket does she choose?",
+          "optionsEn": [
+            "Red",
+            "Green",
+            "Blue",
+            "Black"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "او کاپشن آبی را انتخاب می‌کند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "How does she pay?",
+          "optionsEn": [
+            "With cash",
+            "With her card",
+            "With a ticket",
+            "She does not pay"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "با کارت پرداخت می‌کند."
+        }
+      ],
+      "targetWordIds": [
+        "en-customer-noun",
+        "en-price-noun",
+        "en-pay-verb",
+        "en-choose-verb",
+        "en-help-verb",
+        "en-careful-adjective"
+      ]
+    },
+    {
+      "id": "elfy-reading-06",
+      "titleEn": "A Trip with a Problem",
+      "titleFa": "سفری با یک مشکل",
+      "level": "A1",
+      "targetWords": [
+        "airport",
+        "passport",
+        "traffic",
+        "trip",
+        "arrive",
+        "early",
+        "airline"
+      ],
+      "textEn": "Navid has a flight to Rome. He plans to arrive at the airport early, but there is heavy traffic on the road. When he finally reaches the airport, he cannot find his passport. He looks in his coat and then in his small bag. There it is! The airline worker checks his ticket. Navid has enough time to board, and his trip can begin.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What makes Navid late?",
+          "optionsEn": [
+            "Bad weather",
+            "Heavy traffic",
+            "A lost train ticket",
+            "A broken car"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "ترافیک سنگین باعث تأخیر او می‌شود."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Where is his passport?",
+          "optionsEn": [
+            "At home",
+            "In his coat",
+            "In his small bag",
+            "At the station"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "گذرنامه در کیف کوچک اوست."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Does Navid miss his flight?",
+          "optionsEn": [
+            "Yes",
+            "No",
+            "The story does not say",
+            "His flight is canceled"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "او زمان کافی برای سوار شدن دارد."
+        }
+      ],
+      "targetWordIds": [
+        "en-airport-noun",
+        "en-passport-noun",
+        "en-traffic-noun",
+        "en-trip-noun",
+        "en-arrive-verb",
+        "en-early-adverb",
+        "en-airline-noun"
+      ]
+    },
+    {
+      "id": "elfy-reading-07",
+      "titleEn": "The Quiet Café",
+      "titleFa": "کافهٔ آرام",
+      "level": "A2",
+      "targetWords": [
+        "order",
+        "quiet",
+        "usual",
+        "prefer",
+        "serve",
+        "taste"
+      ],
+      "textEn": "Mahsa goes to her usual café after work. It is quiet today, and only two people are sitting inside. She usually orders coffee, but this afternoon she wants to try something different. The waiter suggests a warm apple drink. Mahsa prefers tea, yet she decides to try his suggestion. He serves the drink with a small cake. She likes the taste and decides to order it again next week.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why is the café quiet?",
+          "optionsEn": [
+            "It is closed.",
+            "Only two people are inside.",
+            "There is a party.",
+            "The waiter is absent."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "فقط دو نفر داخل کافه هستند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does the waiter suggest?",
+          "optionsEn": [
+            "Coffee",
+            "Tea",
+            "A warm apple drink",
+            "Soup"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "پیشخدمت نوشیدنی گرم سیب پیشنهاد می‌کند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Will Mahsa order it again?",
+          "optionsEn": [
+            "Yes, next week",
+            "No, never",
+            "Only tomorrow",
+            "She does not decide"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "او تصمیم دارد هفتهٔ بعد دوباره آن را سفارش دهد."
+        }
+      ],
+      "targetWordIds": [
+        "en-order-verb",
+        "en-quiet-adjective",
+        "en-usual-adjective",
+        "en-prefer-verb",
+        "en-serve-verb",
+        "en-taste-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-08",
+      "titleEn": "A Helpful Neighbor",
+      "titleFa": "همسایهٔ کمک‌کننده",
+      "level": "A2",
+      "targetWords": [
+        "carry",
+        "borrow",
+        "lend",
+        "offer",
+        "kind",
+        "return"
+      ],
+      "textEn": "Reza has to carry a heavy table up the stairs, but he lives alone. His neighbor Parisa sees him and offers to help. They lift the table together. Later, Reza asks if he can borrow a screwdriver. Parisa is kind and agrees to lend him one. Reza fixes the table leg and promises to return the tool before dinner. He leaves a thank-you note at her door.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What does Reza need help carrying?",
+          "optionsEn": [
+            "A sofa",
+            "A table",
+            "A bicycle",
+            "A box of books"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "رضا باید یک میز را بالا ببرد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does Parisa lend him?",
+          "optionsEn": [
+            "A screwdriver",
+            "A bicycle",
+            "A phone",
+            "Some money"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "پریسا یک پیچ‌گوشتی قرض می‌دهد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "When will Reza return it?",
+          "optionsEn": [
+            "Next month",
+            "After work tomorrow",
+            "Before dinner",
+            "In a week"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "قرار است پیش از شام آن را برگرداند."
+        }
+      ],
+      "targetWordIds": [
+        "en-carry-verb",
+        "en-borrow-verb",
+        "en-lend-verb",
+        "en-offer-verb",
+        "en-kind-adjective",
+        "en-return-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-09",
+      "titleEn": "The Change of Plans",
+      "titleFa": "تغییر برنامه",
+      "level": "A2",
+      "targetWords": [
+        "plan",
+        "change",
+        "cancel",
+        "decide",
+        "invite",
+        "perhaps",
+        "prepare"
+      ],
+      "textEn": "On Friday, three friends have a plan to go to the beach. In the morning, the weather changes and dark clouds cover the sky. They decide to cancel the trip. Perhaps they can visit the beach next weekend. Instead, Mina invites everyone to her apartment. She prepares a simple lunch, and the others bring games. The day is different from their first plan, but it is still fun.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why do the friends cancel the beach trip?",
+          "optionsEn": [
+            "One friend is sick.",
+            "The weather changes.",
+            "They lose their tickets.",
+            "They are too tired."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "به دلیل تغییر هوا سفر لغو می‌شود."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Where do they go instead?",
+          "optionsEn": [
+            "To Mina’s apartment",
+            "To a hotel",
+            "To a restaurant",
+            "To school"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "به آپارتمان مینا می‌روند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What do the friends bring?",
+          "optionsEn": [
+            "Books",
+            "Tickets",
+            "Games",
+            "Medicine"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "دوستان بازی همراه می‌آورند."
+        }
+      ],
+      "targetWordIds": [
+        "en-plan-noun",
+        "en-change-verb",
+        "en-cancel-verb",
+        "en-decide-verb",
+        "en-invite-verb",
+        "en-perhaps-adverb",
+        "en-prepare-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-10",
+      "titleEn": "A Mistake at Work",
+      "titleFa": "اشتباه در محل کار",
+      "level": "A2",
+      "targetWords": [
+        "mistake",
+        "check",
+        "clear",
+        "complete",
+        "improve"
+      ],
+      "textEn": "Leyla is new at her office. She must complete a form before lunch. She works quickly but makes a mistake in an address. Her manager asks her to check the details again. At first, Leyla feels nervous. Then her manager gives a clear explanation and shows her the correct way. Leyla fixes the form. She knows that small mistakes can help her improve when she learns from them.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What mistake does Leyla make?",
+          "optionsEn": [
+            "A wrong address",
+            "A wrong phone call",
+            "A late meeting",
+            "A lost form"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "آدرس را اشتباه می‌نویسد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Who helps her understand the problem?",
+          "optionsEn": [
+            "A customer",
+            "Her manager",
+            "Her sister",
+            "A driver"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "مدیرش توضیح روشنی می‌دهد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Leyla do at the end?",
+          "optionsEn": [
+            "Leaves the office",
+            "Cancels the form",
+            "Fixes the form",
+            "Goes shopping"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "فرم را اصلاح می‌کند."
+        }
+      ],
+      "targetWordIds": [
+        "en-mistake-noun",
+        "en-check-verb",
+        "en-clear-adjective",
+        "en-complete-verb",
+        "en-improve-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-11",
+      "titleEn": "The Empty Seat",
+      "titleFa": "صندلی خالی",
+      "level": "A2",
+      "targetWords": [
+        "empty",
+        "comfortable",
+        "passenger",
+        "available",
+        "almost"
+      ],
+      "textEn": "An old bus is almost full when Darya gets on. She looks for a comfortable seat, but the only empty one is beside a window that will not close. She sits down anyway. At the next stop, a passenger leaves, and another seat becomes available. Darya moves there. The new seat is warm, and she can enjoy the rest of her journey.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why is the first seat uncomfortable?",
+          "optionsEn": [
+            "It is broken.",
+            "The window will not close.",
+            "It is wet.",
+            "It is too small."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "پنجرهٔ کنار صندلی بسته نمی‌شود."
+        },
+        {
+          "id": "q2",
+          "promptEn": "When does another seat become available?",
+          "optionsEn": [
+            "At the next stop",
+            "At the last station",
+            "Before she boards",
+            "The next morning"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "در ایستگاه بعدی صندلی خالی می‌شود."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Darya do?",
+          "optionsEn": [
+            "Gets off",
+            "Stands for the whole trip",
+            "Moves to the new seat",
+            "Opens the door"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "به صندلی جدید می‌رود."
+        }
+      ],
+      "targetWordIds": [
+        "en-empty-adjective",
+        "en-comfortable-adjective",
+        "en-passenger-noun",
+        "en-available-adjective",
+        "en-almost-adverb"
+      ]
+    },
+    {
+      "id": "elfy-reading-12",
+      "titleEn": "The Bicycle Repair",
+      "titleFa": "تعمیر دوچرخه",
+      "level": "A2",
+      "targetWords": [
+        "repair",
+        "break",
+        "careful",
+        "necessary",
+        "enough",
+        "follow"
+      ],
+      "textEn": "Omid wants to ride his bicycle, but a small part of it breaks. He takes it to a local repair shop. The mechanic checks the bicycle and explains that a new part is necessary. Omid does not have enough money today. The mechanic suggests a cheaper repair for now. He tells Omid to be careful and to follow his advice until the new part arrives.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What happens to the bicycle?",
+          "optionsEn": [
+            "It is stolen.",
+            "A small part breaks.",
+            "Its color changes.",
+            "It is left at school."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "یکی از قطعات کوچک دوچرخه خراب می‌شود."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Why does Omid choose a cheaper repair?",
+          "optionsEn": [
+            "He has little money.",
+            "He prefers a new bicycle.",
+            "The shop is closing.",
+            "He does not like the mechanic."
+          ],
+          "correctIndex": 0,
+          "explanationFa": "امروز پول کافی ندارد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does the mechanic tell him?",
+          "optionsEn": [
+            "Stop riding forever",
+            "Buy a car",
+            "Be careful",
+            "Leave town"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "تعمیرکار می‌گوید مراقب باشد."
+        }
+      ],
+      "targetWordIds": [
+        "en-repair-verb",
+        "en-break-verb",
+        "en-careful-adjective",
+        "en-necessary-adjective",
+        "en-enough-adverb",
+        "en-follow-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-13",
+      "titleEn": "A Dinner Invitation",
+      "titleFa": "دعوت به شام",
+      "level": "A2",
+      "targetWords": [
+        "invite",
+        "accept",
+        "prepare",
+        "fresh",
+        "share",
+        "conversation"
+      ],
+      "textEn": "Farhad invites two neighbors to dinner. They accept and ask if they should bring anything. Farhad says that he will prepare the main meal. One neighbor brings fresh bread, and the other makes a salad. They share the food at a small table and enjoy a long conversation. By the end of the evening, the neighbors know one another much better.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "How many neighbors are invited?",
+          "optionsEn": [
+            "One",
+            "Two",
+            "Three",
+            "Four"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "فرهاد دو همسایه را دعوت می‌کند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does one neighbor bring?",
+          "optionsEn": [
+            "Fresh bread",
+            "Soup",
+            "Coffee",
+            "A dictionary"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "یکی از همسایه‌ها نان تازه می‌آورد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What happens during dinner?",
+          "optionsEn": [
+            "They watch a film.",
+            "They discuss work only.",
+            "They have a long conversation.",
+            "They leave early."
+          ],
+          "correctIndex": 2,
+          "explanationFa": "مدت زیادی با هم گفتگو می‌کنند."
+        }
+      ],
+      "targetWordIds": [
+        "en-invite-verb",
+        "en-accept-verb",
+        "en-prepare-verb",
+        "en-fresh-adjective",
+        "en-share-verb",
+        "en-conversation-noun"
+      ]
+    },
+    {
+      "id": "elfy-reading-14",
+      "titleEn": "A Different Route",
+      "titleFa": "مسیر متفاوت",
+      "level": "A2",
+      "targetWords": [
+        "direction",
+        "distance",
+        "route",
+        "discover",
+        "compare",
+        "advantage"
+      ],
+      "textEn": "Two friends want to walk to the lake. Their usual route goes through the town, but today they discover a different path on the map. The new route is longer, so they compare the distance. It has one big advantage: most of the path is in the shade. They follow the signs in the right direction. After an hour, they reach the lake and sit beneath a tree.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Where do the friends want to go?",
+          "optionsEn": [
+            "To a lake",
+            "To a mountain",
+            "To an airport",
+            "To a shop"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "می‌خواهند به دریاچه بروند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What is the advantage of the new path?",
+          "optionsEn": [
+            "It has shops.",
+            "It has more shade.",
+            "It is shorter.",
+            "It has trains."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "بخش زیادی از مسیر سایه دارد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What do they use to find the path?",
+          "optionsEn": [
+            "A phone call",
+            "A local guide",
+            "A map and signs",
+            "A taxi"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "با نقشه و تابلوها مسیر را پیدا می‌کنند."
+        }
+      ],
+      "targetWordIds": [
+        "en-direction-noun",
+        "en-distance-noun",
+        "en-route-noun",
+        "en-discover-verb",
+        "en-compare-verb",
+        "en-advantage-noun"
+      ]
+    },
+    {
+      "id": "elfy-reading-15",
+      "titleEn": "The Important Email",
+      "titleFa": "ایمیل مهم",
+      "level": "B1",
+      "targetWords": [
+        "receive",
+        "notice",
+        "respond",
+        "opportunity",
+        "consider",
+        "available"
+      ],
+      "textEn": "Yasmin receives an email about a new job opportunity. She notices that the interview is scheduled for Thursday, but she already has an appointment. She does not want to lose the opportunity, so she considers her options. She writes a polite message to ask if Friday is available. The company responds the next morning and agrees to change the time. Yasmin feels relieved and begins to prepare.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why does Yasmin want a different interview day?",
+          "optionsEn": [
+            "She is traveling.",
+            "She already has an appointment.",
+            "She dislikes Thursdays.",
+            "She is ill."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "پنجشنبه قرار دیگری دارد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Which day does she request?",
+          "optionsEn": [
+            "Monday",
+            "Wednesday",
+            "Friday",
+            "Sunday"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "درخواست می‌کند مصاحبه جمعه باشد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "How does the company respond?",
+          "optionsEn": [
+            "It agrees.",
+            "It cancels the job.",
+            "It does not answer.",
+            "It asks her to call."
+          ],
+          "correctIndex": 0,
+          "explanationFa": "شرکت با تغییر زمان موافقت می‌کند."
+        }
+      ],
+      "targetWordIds": [
+        "en-receive-verb",
+        "en-notice-verb",
+        "en-respond-verb",
+        "en-opportunity-noun",
+        "en-consider-verb",
+        "en-available-adjective"
+      ]
+    },
+    {
+      "id": "elfy-reading-16",
+      "titleEn": "Learning to Speak",
+      "titleFa": "یادگیری صحبت کردن",
+      "level": "B1",
+      "targetWords": [
+        "achieve",
+        "effort",
+        "confident",
+        "experience",
+        "support",
+        "improve"
+      ],
+      "textEn": "When Arman begins learning English, he is afraid to speak in class. His teacher explains that progress takes effort. Each week, Arman practices a short conversation with a classmate. His classmates support him when he makes mistakes. After three months, he feels more confident. He has not achieved perfect English, but his experience shows that regular practice can improve his speaking.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why is Arman afraid at first?",
+          "optionsEn": [
+            "He dislikes books.",
+            "He is nervous about speaking.",
+            "He has no classmates.",
+            "He cannot hear."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "ابتدا از صحبت کردن در کلاس می‌ترسد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Who supports him?",
+          "optionsEn": [
+            "His classmates",
+            "His manager",
+            "His neighbors",
+            "His customers"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "هم‌کلاسی‌ها از او حمایت می‌کنند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What changes after three months?",
+          "optionsEn": [
+            "He stops studying.",
+            "He moves abroad.",
+            "He feels more confident.",
+            "He becomes a teacher."
+          ],
+          "correctIndex": 2,
+          "explanationFa": "اعتمادبه‌نفس بیشتری پیدا می‌کند."
+        }
+      ],
+      "targetWordIds": [
+        "en-achieve-verb",
+        "en-effort-noun",
+        "en-confident-adjective",
+        "en-experience-noun",
+        "en-support-verb",
+        "en-improve-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-17",
+      "titleEn": "A Reliable Friend",
+      "titleFa": "دوست قابل اعتماد",
+      "level": "B1",
+      "targetWords": [
+        "reliable",
+        "expect",
+        "manage",
+        "handle",
+        "valuable"
+      ],
+      "textEn": "When Sara moves into a new apartment, she asks her friend Mona for help. Mona is reliable: if she promises something, she does it. Sara expects moving day to be difficult, but Mona knows how to handle problems calmly. They manage to carry all the boxes upstairs before dark. Sara thanks Mona and says that having a trustworthy friend is more valuable than an expensive gift.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What is Mona like?",
+          "optionsEn": [
+            "Unreliable",
+            "Reliable",
+            "Very shy",
+            "Always late"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "مونا به قول‌هایش عمل می‌کند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What do they manage to do?",
+          "optionsEn": [
+            "Repair the house",
+            "Buy furniture",
+            "Carry all the boxes upstairs",
+            "Finish a meal"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "تمام جعبه‌ها را بالا می‌برند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Sara value most?",
+          "optionsEn": [
+            "An expensive gift",
+            "A trustworthy friend",
+            "A new phone",
+            "A large house"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "دوست قابل اعتماد را ارزشمندتر می‌داند."
+        }
+      ],
+      "targetWordIds": [
+        "en-reliable-adjective",
+        "en-expect-verb",
+        "en-manage-verb",
+        "en-handle-verb",
+        "en-valuable-adjective"
+      ]
+    },
+    {
+      "id": "elfy-reading-18",
+      "titleEn": "The Local Garden",
+      "titleFa": "باغچهٔ محلی",
+      "level": "A2",
+      "targetWords": [
+        "local",
+        "collect",
+        "fresh",
+        "include",
+        "join",
+        "together"
+      ],
+      "textEn": "Every Saturday, people in a small neighborhood work in a local garden. They collect dry leaves and plant vegetables. Today, a new family wants to join them. The group welcomes the family and explains the simple rules. The work includes watering the plants and cleaning the paths. At noon, everyone eats fresh bread and tomatoes together. The new family plans to return next week.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "When do people work in the garden?",
+          "optionsEn": [
+            "Every Monday",
+            "Every Saturday",
+            "Every evening",
+            "Once a year"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "هر شنبه در باغچه کار می‌کنند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Who joins the group?",
+          "optionsEn": [
+            "A new family",
+            "A teacher",
+            "A tourist",
+            "A manager"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "یک خانوادهٔ جدید می‌پیوندد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What do they eat?",
+          "optionsEn": [
+            "Rice and chicken",
+            "Cake and soup",
+            "Bread and tomatoes",
+            "Eggs and cheese"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "نان و گوجه‌فرنگی تازه می‌خورند."
+        }
+      ],
+      "targetWordIds": [
+        "en-local-adjective",
+        "en-collect-verb",
+        "en-fresh-adjective",
+        "en-include-verb",
+        "en-join-verb",
+        "en-together-adverb"
+      ]
+    },
+    {
+      "id": "elfy-reading-19",
+      "titleEn": "The Wrong Delivery",
+      "titleFa": "تحویل اشتباهی",
+      "level": "A2",
+      "targetWords": [
+        "receive",
+        "check",
+        "describe",
+        "return"
+      ],
+      "textEn": "A delivery worker brings a package to Hamed’s apartment. Hamed receives it but notices that the name on the box is different. He checks the address and sees that the package belongs to another building. He calls the shop to describe the mistake. The worker returns later and collects the box. The next day, Hamed receives his own package. He is glad he did not open the wrong one.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What is wrong with the first package?",
+          "optionsEn": [
+            "It is empty.",
+            "It belongs to someone else.",
+            "It is broken.",
+            "It is too heavy."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "بسته برای شخص دیگری است."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does Hamed do first?",
+          "optionsEn": [
+            "Opens it",
+            "Throws it away",
+            "Checks the address",
+            "Pays extra"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "ابتدا آدرس را بررسی می‌کند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "When does he receive his own package?",
+          "optionsEn": [
+            "The next day",
+            "One week later",
+            "The same morning",
+            "Never"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "روز بعد بستهٔ خودش می‌رسد."
+        }
+      ],
+      "targetWordIds": [
+        "en-receive-verb",
+        "en-check-verb",
+        "en-describe-verb",
+        "en-return-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-20",
+      "titleEn": "A Healthier Habit",
+      "titleFa": "عادت سالم‌تر",
+      "level": "B1",
+      "targetWords": [
+        "habit",
+        "influence",
+        "prevent",
+        "recommend",
+        "tend"
+      ],
+      "textEn": "Leila tends to stay up late and look at her phone in bed. In the morning, she is often tired. Her doctor explains that sleep habits can influence how people feel during the day. She recommends a simple change: put the phone away an hour before bedtime. Leila tries this habit for two weeks. It does not prevent every bad night, but she starts to feel better in the mornings.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What does Leila usually do at night?",
+          "optionsEn": [
+            "Exercises",
+            "Looks at her phone in bed",
+            "Cooks dinner",
+            "Reads at work"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "شب‌ها در تخت به تلفن نگاه می‌کند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What change does the doctor recommend?",
+          "optionsEn": [
+            "Sleep in the afternoon",
+            "Drink more coffee",
+            "Put the phone away before bed",
+            "Buy a new phone"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "توصیه می‌کند پیش از خواب تلفن را کنار بگذارد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Does the new habit solve every bad night?",
+          "optionsEn": [
+            "Yes",
+            "No",
+            "The story does not say",
+            "Only on weekends"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "متن می‌گوید همهٔ شب‌های بد برطرف نمی‌شوند."
+        }
+      ],
+      "targetWordIds": [
+        "en-habit-noun",
+        "en-influence-verb",
+        "en-prevent-verb",
+        "en-recommend-verb",
+        "en-tend-verb"
+      ]
+    }
+  ]
+}

@@ -5,17 +5,24 @@ import UIKit
 @main struct ElphyApp: App {
     @AppStorage("appearance") private var appearance = "system"
     private let container: ModelContainer?
-    private let deck = try? Card.load()
+    private let deck: [Card]?
+    private let readingContainer: ModelContainer?
+    private let stories: [ReadingStory]
 
     init() {
         container = try? ModelContainer(for: PersonalCard.self, ReviewState.self, ReviewEvent.self)
+        let deck = try? Card.load()
+        self.deck = deck
+        stories = deck.flatMap { try? ReadingContent.load(cards: $0) } ?? []
+        readingContainer = try? ReadingStore.makeContainer()
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if let container {
-                    Library(deck: deck).modelContainer(container)
+                    Library(deck: deck, stories: stories, readingContainer: readingContainer)
+                        .modelContainer(container)
                 } else {
                     ContentUnavailableView("دسترسی به داده‌ها ممکن نیست", systemImage: "externaldrive",
                                            description: Text("برنامه را ببند و دوباره باز کن."))
@@ -34,6 +41,8 @@ struct Library: View {
     private enum Destination { case today, vocabulary, progress, settings }
 
     let deck: [Card]?
+    let stories: [ReadingStory]
+    let readingContainer: ModelContainer?
     @Query private var personal: [PersonalCard]
     @Query private var states: [ReviewState]
     @Query(sort: \ReviewEvent.date, order: .reverse) private var events: [ReviewEvent]
@@ -41,6 +50,9 @@ struct Library: View {
     @State private var selection: Destination = .today
     @State private var session: StudyPlan?
     @State private var quiz: QuizPresentation?
+    @State private var reading: ReadingPresentation?
+    @State private var dailyReading: (day: ReadingDay, storyID: String?)?
+    @State private var readingRecords: [String: ReadingRecord] = [:]
     @State private var showsPractice = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -52,14 +64,17 @@ struct Library: View {
     var body: some View {
         let index = stateByID
         let calendar = Calendar.current
-        let planner = makePlanner(at: now, recalls: events.compactMap(\.recall), calendar: calendar)
+        let recalls = events.compactMap(\.recall)
+        let planner = makePlanner(at: now, recalls: recalls, calendar: calendar)
         let showsSchedule = selection == .today || selection == .progress
         let wake = scenePhase == .active && showsSchedule
             ? ReviewClock.nextRefresh(at: now, nextDue: planner.nextDue, calendar: calendar) : nil
+        let day = ReadingDay(at: now, calendar: calendar)
+        let readingRefreshDay = scenePhase == .active && selection == .today && reading == nil ? day : nil
 
         TabView(selection: $selection) {
             Tab("امروز", systemImage: "sun.max", value: Destination.today) {
-                today(at: now, planner: planner)
+                today(at: now, planner: planner, day: day)
             }
             Tab("واژه‌ها", systemImage: "rectangle.on.rectangle", value: Destination.vocabulary) {
                 CollectionView(bundled: deck ?? [], personal: personal, states: index, statuses: planner.status)
@@ -73,12 +88,28 @@ struct Library: View {
         }
         .sheet(item: $session) { StudyView(plan: $0) }
         .sheet(item: $quiz) { QuizView(quiz: $0.session) }
+        .sheet(item: $reading, onDismiss: { now = .now }) { presentation in
+            if let readingContainer {
+                ReadingLibrary(stories: stories,
+                               cards: Dictionary(uniqueKeysWithValues: (deck ?? []).map { ($0.id, $0) }),
+                               statuses: planner.status, vocabularyProgress: index.mapValues(\.progress),
+                               recalls: recalls, now: now, initialStoryID: presentation.storyID)
+                    .modelContainer(readingContainer)
+            }
+        }
+        .task(id: readingRefreshDay) {
+            guard readingRefreshDay != nil, !Task.isCancelled else { return }
+            refreshDailyReading(at: .now, calendar: .current)
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active { now = .now }
         }
         .onChange(of: selection) { _, _ in now = .now }
         .onChange(of: events.first?.attemptID) { _, _ in now = .now }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            now = .now
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
             now = .now
         }
         .task(id: [now, wake]) {
@@ -98,21 +129,13 @@ struct Library: View {
                      at: date, calendar: calendar, recalls: recalls)
     }
 
-    private func today(at date: Date, planner: StudyPlanner) -> some View {
+    private func today(at date: Date, planner: StudyPlanner, day: ReadingDay) -> some View {
         let next = todayMessage(for: planner)
         let title = Text(next.title).font(HeadingFont.title).accessibilityAddTraits(.isHeader)
         let mood: ElephantMascot.Mood = planner.nextAction != .practice ? .welcoming
             : planner.reachedGoalToday ? .happy : .resting
-        let dateFormat = Date.FormatStyle(date: .complete, time: .omitted,
-                                         locale: Locale(identifier: "fa_IR"),
-                                         calendar: Calendar(identifier: .persian))
         return Page(avoidsFloatingTabBar: true) {
-            HStack {
-                Text("Elphy").font(HeadingFont.title).foregroundStyle(Palette.sage)
-                Spacer()
-                Text(date.formatted(dateFormat))
-                    .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-            }
+            todayHeader(at: date)
 
             VStack(alignment: .leading, spacing: 12) {
                 if dynamicTypeSize.isAccessibilitySize {
@@ -137,11 +160,111 @@ struct Library: View {
 
             dailyPlanPanel(planner)
             masteryPanel(planner.mastery)
+            readingPanel(for: day, planner: planner)
             optionalPracticePanel(planner)
 
             if deck == nil {
                 Label("مجموعهٔ اصلی بارگیری نشد. واژه‌های شخصی در دسترس‌اند.", systemImage: "exclamationmark.circle")
             }
+        }
+    }
+
+    private struct ReadingPresentation: Identifiable {
+        let id = UUID()
+        let storyID: String?
+    }
+
+    private func refreshDailyReading(at date: Date, calendar: Calendar) {
+        guard let readingContainer, !stories.isEmpty else { return }
+        let day = ReadingDay(at: date, calendar: calendar)
+        let context = readingContainer.mainContext
+        do {
+            let records = try ReadingStore.records(in: context)
+            readingRecords = records
+            let storyID = try ReadingStore.dailyStoryID(at: date, calendar: calendar,
+                                                       availableIDs: Set(stories.map(\.id)), in: context) { previousID in
+                let recalls = events.compactMap(\.recall)
+                let planner = makePlanner(at: date, recalls: recalls, calendar: calendar)
+                return ReadingRecommendationEngine.recommend(
+                    stories: stories, statuses: planner.status, progress: stateByID.mapValues(\.progress),
+                    recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID
+                )?.storyID
+            }
+            dailyReading = (day, storyID)
+        } catch {
+            if dailyReading?.day != day { dailyReading = (day, nil) }
+        }
+    }
+
+    private func openReading(storyID: String? = nil) {
+        TapCue.open.play()
+        reading = ReadingPresentation(storyID: storyID)
+    }
+
+    @ViewBuilder
+    private func readingPanel(for day: ReadingDay, planner: StudyPlanner) -> some View {
+        if readingContainer != nil, let dailyReading, dailyReading.day == day,
+           let story = stories.first(where: { $0.id == dailyReading.storyID }) {
+            let count = story.targetWordIds.filter { id in
+                guard let status = planner.status[id] else { return false }
+                return status.stage != .new
+            }.count
+            ReadingRecommendationCard(story: story, matchingVocabularyCount: count,
+                                      completed: readingRecords[story.id]?.completed == true,
+                                      start: { openReading(storyID: story.id) }, showLibrary: { openReading() })
+        } else if readingContainer != nil, !stories.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("داستان پیشنهادی امروز").font(HeadingFont.section)
+                if dailyReading?.day == day {
+                    Text("داستان امروز در دسترس نیست.").foregroundStyle(Palette.muted)
+                }
+                Button("همهٔ داستان‌ها") { openReading() }
+                    .frame(minHeight: 44)
+            }
+            .modifier(Panel(fill: Palette.tint))
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("داستان‌خوانی").font(HeadingFont.section)
+                Text("داستان‌ها در دسترس نیستند. برنامه را دوباره باز کن.")
+                    .foregroundStyle(Palette.muted)
+            }
+            .modifier(Panel())
+        }
+    }
+
+    private func todayHeader(at date: Date) -> some View {
+        let persianDate = Date.FormatStyle(locale: Locale(identifier: "fa_IR"),
+                                           calendar: Calendar(identifier: .persian))
+        let dateBlock = VStack(alignment: .leading, spacing: 2) {
+            Text(date.formatted(persianDate.weekday(.wide)))
+                .font(HeadingFont.section)
+            Text(date.formatted(persianDate.day().month(.wide).year()))
+                .font(PersianFont.subheadline)
+                .foregroundStyle(Palette.muted)
+        }
+        .accessibilityElement(children: .combine)
+
+        let wordmark = Text("Elphy")
+            .font(.system(.largeTitle, design: .rounded, weight: .bold))
+            .foregroundStyle(Palette.sage)
+            .environment(\.layoutDirection, .leftToRight)
+
+        return VStack(spacing: 12) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                    dateBlock.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    wordmark.fixedSize(horizontal: true, vertical: false)
+                }
+                VStack(spacing: 6) {
+                    dateBlock.frame(maxWidth: .infinity, alignment: .leading)
+                    wordmark.frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+            Rectangle()
+                .fill(Palette.border)
+                .frame(height: 1)
+                .accessibilityHidden(true)
         }
     }
 
