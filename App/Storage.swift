@@ -38,6 +38,10 @@ import SwiftData
         streak = 0
         due = date
     }
+
+    var progress: StudyPlanner.Progress {
+        .init(introduced: introduced, due: due, days: days, streak: streak)
+    }
 }
 
 @Model final class ReviewEvent {
@@ -54,6 +58,10 @@ import SwiftData
         self.date = date
         self.rating = rating.rawValue
     }
+
+    var recall: Recall? {
+        Rating(rawValue: rating).map { Recall(cardID: cardID, date: date, rating: $0) }
+    }
 }
 
 @MainActor enum ReviewStore {
@@ -64,6 +72,9 @@ import SwiftData
         let cardID = card.id
         let states = FetchDescriptor<ReviewState>(predicate: #Predicate { $0.cardID == cardID })
         let existing = try context.fetch(states).first
+        // A second session may still have a card that was already scheduled elsewhere.
+        // Only an active short learning step permits an early attempt.
+        if let existing, existing.days > 0, existing.due > date { return }
         let state = existing ?? ReviewState(cardID: cardID, date: date)
         if existing == nil { context.insert(state) }
         let result = Schedule(days: state.days, streak: state.streak, due: state.due)

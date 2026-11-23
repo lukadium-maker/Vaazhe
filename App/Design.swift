@@ -28,12 +28,32 @@ func fa(_ number: Int) -> String {
 }
 
 struct ElephantMascot: View {
+    enum Mood { case welcoming, happy, encouraging, celebrating, resting }
+
+    var mood: Mood = .welcoming
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var motion = false
+
     var body: some View {
         Image("ElphyMark")
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
-            .foregroundStyle(Palette.mascotGreen)
+            .foregroundStyle(mood == .resting ? Palette.sage : Palette.mascotGreen)
+            .rotationEffect(.degrees(motion && mood == .encouraging ? -5 : 0))
+            .offset(y: motion && mood == .happy ? -3 : 0)
+            .scaleEffect(motion && mood == .celebrating ? 1.08 : 1)
+            .task(id: mood) {
+                motion = false
+                guard !reduceMotion, mood != .welcoming, mood != .resting else { return }
+                withAnimation(.easeOut(duration: 0.18)) { motion = true }
+                do {
+                    try await Task.sleep(for: .milliseconds(220))
+                    withAnimation(.easeInOut(duration: 0.26)) { motion = false }
+                } catch {
+                    // The view disappeared or moved to a new mood.
+                }
+            }
             .accessibilityHidden(true)
     }
 }
