@@ -7,6 +7,7 @@ enum Palette {
     static let muted = adaptive(0x625E54, 0xC3BBAD)
     static let card = adaptive(0xEFE7DB, 0x312D26)
     static let border = adaptive(0xDED5C6, 0x524A40)
+    static let mascotCoral = adaptive(0xF4553B, 0xFF775E)
     static let celebrationGold = adaptive(0x9A7138, 0xDAB277)
     static let sage = adaptive(0x465741, 0xBAC9AF)
     static let tint = adaptive(0xE1E7DA, 0x323C30)
@@ -27,12 +28,12 @@ func fa(_ number: Int) -> String {
 }
 
 struct ElephantMascot: View {
-    var finished = false
-
     var body: some View {
-        Image(finished ? "ElephantFinished" : "ElephantFlashcard")
+        Image("ElphyMark")
+            .renderingMode(.template)
             .resizable()
             .scaledToFit()
+            .foregroundStyle(Palette.mascotCoral)
             .accessibilityHidden(true)
     }
 }

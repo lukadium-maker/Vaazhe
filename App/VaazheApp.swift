@@ -99,10 +99,10 @@ struct Library: View {
                     HStack(spacing: 12) {
                         todayGreeting(hasPractice: hasPractice).fixedSize(horizontal: true, vertical: false)
                         Spacer(minLength: 0)
-                        ElephantMascot(finished: !hasPractice).frame(width: 88, height: 88)
+                        ElephantMascot().frame(width: 88, height: 88)
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        ElephantMascot(finished: !hasPractice).frame(width: 88, height: 88)
+                        ElephantMascot().frame(width: 88, height: 88)
                         todayGreeting(hasPractice: hasPractice)
                     }
                 }
