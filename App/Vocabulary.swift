@@ -144,6 +144,26 @@ struct StudyPlan: Identifiable {
     var mode: Mode = .scheduled
 }
 
+enum ReviewClock {
+    static func nextRefresh(at date: Date, nextDue: Date?, calendar: Calendar) -> Date? {
+        let midnight = calendar.dateInterval(of: .day, for: date)?.end
+        guard let nextDue, nextDue > date else { return midnight }
+        return min(nextDue, midnight ?? nextDue)
+    }
+}
+
+struct MasteryBreakdown {
+    let mastered: Int
+    let learning: Int
+    let new: Int
+
+    var total: Int { mastered + learning + new }
+
+    func fraction(_ count: Int) -> Double {
+        total == 0 ? 0 : Double(count) / Double(total)
+    }
+}
+
 struct StudyPlanner {
     struct Progress {
         let introduced: Date
@@ -158,13 +178,14 @@ struct StudyPlanner {
 
     let newCards: [Card]
     let dueCards: [Card]
-    let scheduledToday: Int
+    let scheduledLaterToday: Int
     let introducedCount: Int
     let introducedToday: Int
     let remainingNew: Int
     let remainingStarter: Int
     let nextDue: Date?
     let effectiveGoal: Int
+    var reachedGoalToday: Bool { effectiveGoal > 0 && introducedToday >= effectiveGoal }
     let nextAction: NextAction
     let status: [String: VocabularyStatus]
     let practicedCards: [Card]
@@ -192,7 +213,7 @@ struct StudyPlanner {
         dueCards = scheduled.filter { $0.due <= date }.sorted { $0.due < $1.due }.map(\.card)
         let tomorrow = calendar.dateInterval(of: .day, for: date)?.end ?? date
         nextDue = scheduled.map(\.due).filter { $0 > date }.min()
-        scheduledToday = scheduled.filter { $0.due <= date || $0.due < tomorrow }.count
+        scheduledLaterToday = scheduled.filter { date < $0.due && $0.due < tomorrow }.count
         introducedCount = active.count
 
         let statuses = Dictionary(uniqueKeysWithValues: cards.map { card in
@@ -214,6 +235,12 @@ struct StudyPlanner {
         case (true, true):
             nextAction = !active.isEmpty ? .practice : fresh.isEmpty ? .browse : .setGoal
         }
+    }
+
+    var mastery: MasteryBreakdown {
+        MasteryBreakdown(mastered: masteredCards.count,
+                         learning: introducedCount - masteredCards.count,
+                         new: remainingNew)
     }
 
     var dailyPlan: StudyPlan? {

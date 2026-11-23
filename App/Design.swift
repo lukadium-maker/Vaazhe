@@ -7,6 +7,7 @@ enum Palette {
     static let muted = adaptive(0x625E54, 0xC3BBAD)
     static let card = adaptive(0xEFE7DB, 0x312D26)
     static let border = adaptive(0xDED5C6, 0x524A40)
+    static let learningProgress = adaptive(0x829477, 0x788F72)
     static let mascotGreen = adaptive(0x254936, 0x88B39A)
     static let celebrationGold = adaptive(0x9A7138, 0xDAB277)
     static let sage = adaptive(0x465741, 0xBAC9AF)
@@ -59,9 +60,16 @@ struct ElephantMascot: View {
 }
 
 struct Page<Content: View>: View {
+    private let avoidsFloatingTabBar: Bool
     let content: Content
+    @State private var tabBarOverlap: CGFloat?
+    // Reserve at least one standard tap target for the floating bar and its edge effect.
+    @ScaledMetric(relativeTo: .body) private var minimumTabClearance = 44.0
 
-    init(@ViewBuilder content: () -> Content) { self.content = content() }
+    init(avoidsFloatingTabBar: Bool = false, @ViewBuilder content: () -> Content) {
+        self.avoidsFloatingTabBar = avoidsFloatingTabBar
+        self.content = content()
+    }
 
     var body: some View {
         ScrollView {
@@ -71,8 +79,89 @@ struct Page<Content: View>: View {
                 .padding(.vertical, 24)
                 .frame(maxWidth: .infinity)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if avoidsFloatingTabBar, #available(iOS 26, *) {
+                Color.clear
+                    .frame(height: max(tabBarOverlap ?? 0, minimumTabClearance))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .background {
+            if avoidsFloatingTabBar, #available(iOS 26, *) {
+                TabBarOverlapReader { tabBarOverlap = $0 }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .background(Palette.paper.ignoresSafeArea())
         .foregroundStyle(Palette.ink)
+    }
+}
+
+// Measure in the same window coordinate space as the native tab bar. The reader
+// sits outside the scroll inset so its measurement never includes its correction.
+private struct TabBarOverlapReader: UIViewRepresentable {
+    let onChange: (CGFloat?) -> Void
+
+    func makeUIView(context: Context) -> Probe { Probe() }
+
+    func updateUIView(_ view: Probe, context: Context) {
+        view.onChange = onChange
+        view.measureAfterLayout()
+    }
+
+    final class Probe: UIView {
+        var onChange: ((CGFloat?) -> Void)?
+        private var lastOverlap: CGFloat?
+        private var measurementPending = false
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            measureAfterLayout()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            measureAfterLayout()
+        }
+
+        override func safeAreaInsetsDidChange() {
+            super.safeAreaInsetsDidChange()
+            measureAfterLayout()
+        }
+
+        func measureAfterLayout() {
+            guard !measurementPending else { return }
+            measurementPending = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                measurementPending = false
+                guard let window, !bounds.isEmpty else { return }
+                let overlap = tabBarOverlap(in: window)
+                guard overlap != lastOverlap else { return }
+                lastOverlap = overlap
+                onChange?(overlap)
+            }
+        }
+
+        private func tabBarOverlap(in window: UIWindow) -> CGFloat? {
+            var responder: UIResponder? = self
+            while let current = responder {
+                if let controller = current as? UIViewController,
+                   let tabs = (controller as? UITabBarController) ?? controller.tabBarController,
+                   tabs.tabBar.window === window, !tabs.tabBar.bounds.isEmpty {
+                    let bar = tabs.tabBar
+                    guard !bar.isHidden, bar.alpha > 0 else { return 0 }
+                    let viewport = convert(safeAreaLayoutGuide.layoutFrame, to: window)
+                    let occlusion = bar.convert(bar.bounds, to: window)
+                    guard viewport.intersects(occlusion) else { return 0 }
+                    return ceil(max(0, viewport.maxY - occlusion.minY))
+                }
+                responder = current.next
+            }
+            return nil
+        }
     }
 }
 

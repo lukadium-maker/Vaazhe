@@ -117,7 +117,7 @@ final class VaazheTests: XCTestCase {
         XCTAssertEqual(changed.newCards.count, 4)
         XCTAssertEqual(changed.nextAction, .continueStudy)
         XCTAssertEqual(changed.introducedToday, 1)
-        XCTAssertEqual(changed.scheduledToday, 1)
+        XCTAssertEqual(changed.scheduledLaterToday, 1)
         XCTAssertTrue(changed.dueCards.isEmpty)
         let tomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now)!)
         let nextDay = StudyPlanner(cards: cards, progress: state, goal: 5, at: tomorrow, calendar: calendar)
@@ -137,7 +137,7 @@ final class VaazheTests: XCTestCase {
         XCTAssertEqual(complete.nextAction, .practice)
         XCTAssertNil(complete.dailyPlan)
         XCTAssertEqual(complete.nextDue, future)
-        XCTAssertEqual(complete.scheduledToday, 0)
+        XCTAssertEqual(complete.scheduledLaterToday, 0)
         let plan = try XCTUnwrap(complete.optionalPlan(for: complete.practicedCards))
         var session = StudySession(plan: plan)
         session.reveal()
@@ -179,6 +179,75 @@ final class VaazheTests: XCTestCase {
         let status = VocabularyStatus(progress: state, recalls: lapsed, calendar: calendar)
         XCTAssertEqual(status.stage, .learning)
         XCTAssertTrue(status.isDifficult)
+    }
+
+    func testReviewClockRefreshesAtTheExactDueTimeOrMidnight() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let midnight = try XCTUnwrap(calendar.dateInterval(of: .day, for: now)?.end)
+        let due = midnight.addingTimeInterval(-126)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: due.addingTimeInterval(-1), nextDue: due, calendar: calendar), due)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: due, nextDue: due, calendar: calendar), midnight)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: due, nextDue: midnight.addingTimeInterval(60), calendar: calendar), midnight)
+    }
+
+    func testPlannerSeparatesOverdueLaterTodayAndTomorrowAndResetsAtMidnight() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Tehran"))
+        let midnight = try XCTUnwrap(calendar.dateInterval(of: .day, for: now)?.end)
+        let before = midnight.addingTimeInterval(-120)
+        let dates = [before.addingTimeInterval(-30), before.addingTimeInterval(30), midnight]
+        let cards = dates.indices.map { index in
+            var item = card
+            item.id = "scheduled-\(index)"
+            return item
+        }
+        let states = Dictionary(uniqueKeysWithValues: zip(cards, dates).map { item, date in
+            (item.id, StudyPlanner.Progress(introduced: before, due: date))
+        })
+        let evening = StudyPlanner(cards: cards, progress: states, goal: 5, at: before, calendar: calendar)
+        XCTAssertEqual(evening.dueCards.map(\.id), [cards[0].id])
+        XCTAssertEqual(evening.scheduledLaterToday, 1)
+        XCTAssertEqual(evening.nextDue, dates[1])
+        XCTAssertEqual(evening.introducedToday, 3)
+        XCTAssertTrue(evening.reachedGoalToday)
+        let due = StudyPlanner(cards: cards, progress: states, goal: 5, at: dates[1], calendar: calendar)
+        XCTAssertEqual(due.dueCards.count, 2)
+        XCTAssertEqual(due.scheduledLaterToday, 0)
+        XCTAssertEqual(ReviewClock.nextRefresh(at: dates[1], nextDue: due.nextDue, calendar: calendar),
+                       midnight)
+        let tomorrow = StudyPlanner(cards: cards, progress: states, goal: 5, at: midnight, calendar: calendar)
+        XCTAssertEqual(tomorrow.dueCards.count, 3)
+        XCTAssertEqual(tomorrow.introducedToday, 0)
+        XCTAssertFalse(tomorrow.reachedGoalToday)
+    }
+
+    func testMasterySegmentsAccountForEveryWordAndHandleEmptyAndMasteredDecks() {
+        let calendar = Calendar(identifier: .gregorian)
+        var learned = card
+        learned.id = "mastered"
+        var fresh = card
+        fresh.id = "fresh"
+        let old = calendar.date(byAdding: .day, value: -6, to: now)!
+        let states: [String: StudyPlanner.Progress] = [
+            learned.id: .init(introduced: old, due: now, days: 8, streak: 3),
+            card.id: .init(introduced: old, due: now)
+        ]
+        let history = [6, 4, 0].map { offset in
+            Recall(cardID: learned.id, date: calendar.date(byAdding: .day, value: -offset, to: now)!, rating: .good)
+        }
+        let mixed = StudyPlanner(cards: [learned, card, fresh], progress: states, goal: 10,
+                                 at: now, calendar: calendar, recalls: history).mastery
+        XCTAssertEqual([mixed.mastered, mixed.learning, mixed.new], [1, 1, 1])
+        XCTAssertEqual(mixed.total, 3)
+        XCTAssertEqual(mixed.fraction(mixed.learning), 1.0 / 3.0)
+        let empty = StudyPlanner(cards: [], progress: states, goal: 10, at: now, calendar: calendar).mastery
+        XCTAssertEqual(empty.total, 0)
+        XCTAssertEqual(empty.fraction(empty.new), 0)
+        let complete = StudyPlanner(cards: [learned], progress: states, goal: 10,
+                                    at: now, calendar: calendar, recalls: history).mastery
+        XCTAssertEqual(complete.fraction(complete.mastered), 1)
+        XCTAssertEqual(complete.learning, 0)
     }
 
     @MainActor func testRetryKeepsShortDueDateAndEarlyScheduledSubmissionDoesNotDuplicate() throws {

@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UIKit
 
 @main struct VaazheApp: App {
     @AppStorage("appearance") private var appearance = "system"
@@ -40,28 +41,31 @@ struct Library: View {
     @State private var selection: Destination = .today
     @State private var session: StudyPlan?
     @State private var quiz: QuizPresentation?
-    @State private var quizUnavailable = false
+    @State private var showsPractice = false
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var now = Date.now
 
     private var cards: [Card] { (deck ?? []) + personal.map(\.card) }
     private var stateByID: [String: ReviewState] { Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0) }) }
 
     var body: some View {
         let index = stateByID
-        let recalls = events.compactMap(\.recall)
+        let calendar = Calendar.current
+        let planner = makePlanner(at: now, recalls: events.compactMap(\.recall), calendar: calendar)
+        let showsSchedule = selection == .today || selection == .progress
+        let wake = scenePhase == .active && showsSchedule
+            ? ReviewClock.nextRefresh(at: now, nextDue: planner.nextDue, calendar: calendar) : nil
+
         TabView(selection: $selection) {
             Tab("امروز", systemImage: "sun.max", value: Destination.today) {
-                TimelineView(.periodic(from: .now, by: 30)) { timeline in
-                    today(at: timeline.date, planner: makePlanner(at: timeline.date, recalls: recalls))
-                }
+                today(at: now, planner: planner)
             }
             Tab("واژه‌ها", systemImage: "rectangle.on.rectangle", value: Destination.vocabulary) {
-                CollectionView(bundled: deck ?? [], personal: personal, states: index,
-                               statuses: makePlanner(at: .now, recalls: recalls).status)
+                CollectionView(bundled: deck ?? [], personal: personal, states: index, statuses: planner.status)
             }
             Tab("پیشرفت", systemImage: "chart.bar.xaxis", value: Destination.progress) {
-                TimelineView(.periodic(from: .now, by: 30)) { timeline in
-                    progress(makePlanner(at: timeline.date, recalls: recalls))
-                }
+                progress(planner)
             }
             Tab("تنظیمات", systemImage: "gearshape", value: Destination.settings) {
                 SettingsView(states: states, events: events)
@@ -69,24 +73,40 @@ struct Library: View {
         }
         .sheet(item: $session) { StudyView(plan: $0) }
         .sheet(item: $quiz) { QuizView(quiz: $0.session) }
-        .alert("برای این آزمون گزینه‌های کافی پیدا نشد", isPresented: $quizUnavailable) {
-            Button("باشه", role: .cancel) {}
-        } message: {
-            Text("می‌توانی با کارت‌های تمرین، واژه‌ها را مرور کنی.")
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active { now = .now }
+        }
+        .onChange(of: selection) { _, _ in now = .now }
+        .onChange(of: events.first?.attemptID) { _, _ in now = .now }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            now = .now
+        }
+        .task(id: [now, wake]) {
+            guard let wake else { return }
+            do {
+                try await Task.sleep(for: .seconds(max(0, wake.timeIntervalSinceNow)))
+                try Task.checkCancellation()
+                now = .now
+            } catch {
+                // The activity, clock, or nearest review changed.
+            }
         }
     }
 
-    private func makePlanner(at date: Date, recalls: [Recall]) -> StudyPlanner {
+    private func makePlanner(at date: Date, recalls: [Recall], calendar: Calendar = .current) -> StudyPlanner {
         StudyPlanner(cards: cards, progress: stateByID.mapValues(\.progress), goal: goal,
-                     at: date, calendar: .current, recalls: recalls)
+                     at: date, calendar: calendar, recalls: recalls)
     }
 
     private func today(at date: Date, planner: StudyPlanner) -> some View {
         let next = todayMessage(for: planner)
+        let title = Text(next.title).font(HeadingFont.title).accessibilityAddTraits(.isHeader)
+        let mood: ElephantMascot.Mood = planner.nextAction != .practice ? .welcoming
+            : planner.reachedGoalToday ? .happy : .resting
         let dateFormat = Date.FormatStyle(date: .complete, time: .omitted,
                                          locale: Locale(identifier: "fa_IR"),
                                          calendar: Calendar(identifier: .persian))
-        return Page {
+        return Page(avoidsFloatingTabBar: true) {
             HStack {
                 Text("واژه").font(HeadingFont.title).foregroundStyle(Palette.sage)
                 Spacer()
@@ -94,77 +114,30 @@ struct Library: View {
                     .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
             }
 
-            VStack(alignment: .leading, spacing: 13) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        Text(next.title).font(HeadingFont.title)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .accessibilityAddTraits(.isHeader)
-                        Spacer(minLength: 0)
-                        ElephantMascot(mood: planner.nextAction == .practice ? .resting : .welcoming)
-                            .frame(width: 72, height: 66)
+            VStack(alignment: .leading, spacing: 12) {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(spacing: 8) {
+                        ElephantMascot(mood: mood).frame(width: 64, height: 58)
+                        title.multilineTextAlignment(.center)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        ElephantMascot(mood: planner.nextAction == .practice ? .resting : .welcoming)
-                            .frame(width: 66, height: 60)
-                        Text(next.title).font(HeadingFont.title).accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: 12) {
+                        title
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ElephantMascot(mood: mood).frame(width: 64, height: 58)
                     }
                 }
-                Text(next.detail).foregroundStyle(Palette.muted)
+                if let detail = next.detail { Text(detail).foregroundStyle(Palette.muted) }
                 Button(next.button) { startNextAction() }
                     .buttonStyle(PrimaryButton())
             }
             .modifier(Panel(fill: Palette.tint))
 
-            VStack(alignment: .leading, spacing: 10) {
-                ViewThatFits(in: .horizontal) {
-                    HStack { dailyHeading; Spacer(); dailyGoalPicker }
-                    VStack(alignment: .leading, spacing: 4) { dailyHeading; dailyGoalPicker }
-                }
-                if planner.effectiveGoal > 0 {
-                    ProgressView(value: Double(min(planner.introducedToday, planner.effectiveGoal)),
-                                 total: Double(planner.effectiveGoal))
-                        .progressViewStyle(StudyProgressStyle())
-                        .accessibilityLabel("پیشرفت هدف واژه‌های جدید")
-                    Text("امروز \(fa(planner.introducedToday)) واژهٔ جدید تمرین شد. هدف: \(fa(planner.effectiveGoal)) واژه.")
-                } else {
-                    Text(goal == 0 ? "امروز به مرور اختصاص دارد." : "واژهٔ جدیدی باقی نمانده.")
-                }
-                Text("\(fa(planner.dueCards.count)) آمادهٔ مرور · \(fa(planner.scheduledToday - planner.dueCards.count)) مرورِ دیگر تا پایان امروز")
-                if planner.dueCards.isEmpty, let nextDue = planner.nextDue {
-                    Text("مرور بعدی: \(nextDue.formatted(.relative(presentation: .named)))")
-                        .foregroundStyle(Palette.muted)
-                }
-                if deck != nil && planner.remainingStarter == 0 && planner.remainingNew > 0 {
-                    Text("همهٔ واژه‌های مجموعهٔ آغازین را تمرین کرده‌ای.")
-                        .foregroundStyle(Palette.muted)
-                }
-            }
-            .font(PersianFont.subheadline)
-            .modifier(Panel())
-
-            masteryPanel(planner)
-
-            if !planner.practicedCards.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("تمرین اختیاری").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
-                    if let plan = planner.optionalPlan(for: planner.difficultCards) {
-                        Button("تمرین واژه‌های دشوار", systemImage: "arrow.counterclockwise") { open(plan) }
-                    }
-                    if !planner.masteredCards.isEmpty {
-                        Button("تمرین واژه‌های تثبیت‌شده", systemImage: "checkmark.circle") {
-                            if let plan = planner.optionalPlan(for: planner.masteredCards.shuffled()) { open(plan) }
-                        }
-                    }
-                    Button("آزمون چهارگزینه‌ای", systemImage: "checklist") {
-                        startQuiz(with: planner.practicedCards)
-                    }
-                    Text("این تمرین‌ها زمان مرورهای برنامه‌ریزی‌شده را تغییر نمی‌دهند.")
-                        .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-                }
-                .buttonStyle(.borderless)
-                .modifier(Panel())
-            }
+            dailyPlanPanel(planner)
+            masteryPanel(planner.mastery)
+            optionalPracticePanel(planner)
 
             if deck == nil {
                 Label("مجموعهٔ اصلی بارگیری نشد. واژه‌های شخصی در دسترس‌اند.", systemImage: "exclamationmark.circle")
@@ -172,11 +145,59 @@ struct Library: View {
         }
     }
 
+    private func dailyPlanPanel(_ planner: StudyPlanner) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ViewThatFits(in: .horizontal) {
+                HStack { dailyHeading; Spacer(minLength: 4); dailyGoalPicker }
+                VStack(alignment: .leading, spacing: 4) { dailyHeading; dailyGoalPicker }
+            }
+            if planner.effectiveGoal > 0 {
+                ProgressView(value: Double(min(planner.introducedToday, planner.effectiveGoal)),
+                             total: Double(planner.effectiveGoal))
+                    .progressViewStyle(StudyProgressStyle())
+                    .accessibilityLabel("پیشرفت هدف واژه‌های جدید")
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) { dailyStats(planner) }.fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 7) { dailyStats(planner) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if deck != nil && planner.remainingStarter == 0 && planner.remainingNew > 0 {
+                Text("همهٔ واژه‌های مجموعهٔ آغازین را تمرین کرده‌ای.").foregroundStyle(Palette.muted)
+            }
+        }
+        .font(PersianFont.subheadline)
+        .modifier(Panel())
+    }
+
+    @ViewBuilder private func dailyStats(_ planner: StudyPlanner) -> some View {
+        let introduced = planner.introducedToday
+        let target = planner.effectiveGoal
+        stat(target > 0 ? "\(fa(introduced)) از \(fa(target))" : fa(introduced),
+             label: "یادگیری امروز",
+             explanation: target > 0 ? "\(fa(introduced)) واژهٔ جدید از هدف \(fa(target)) واژه"
+                : "\(fa(introduced)) واژهٔ جدید تمرین شد")
+        stat(fa(planner.dueCards.count), label: "آمادهٔ مرور",
+             explanation: "\(fa(planner.dueCards.count)) واژه که همین حالا می‌توان مرور کرد")
+        stat(fa(planner.scheduledLaterToday), label: "بعدتر امروز",
+             explanation: "\(fa(planner.scheduledLaterToday)) واژه که تا پایان امروز آمادهٔ مرور می‌شود")
+    }
+
+    private func stat(_ value: String, label: String, explanation: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value).font(PersianFont.emphasis)
+            Text(label).font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(explanation)
+    }
+
     private var dailyHeading: some View {
         Text("برنامهٔ امروز").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
     }
 
-    private func todayMessage(for planner: StudyPlanner) -> (title: String, detail: String, button: String) {
+    private func todayMessage(for planner: StudyPlanner) -> (title: String, detail: String?, button: String) {
         let new = "\(fa(planner.newCards.count)) واژهٔ جدید"
         let due = "\(fa(planner.dueCards.count)) واژه برای مرور"
         switch planner.nextAction {
@@ -192,16 +213,19 @@ struct Library: View {
                 : "\(due) و \(new) باقی مانده."
             return ("از همین‌جا ادامه بده", detail, "ادامهٔ تمرین")
         case .practice:
-            let title = planner.remainingNew == 0 ? "همهٔ واژه‌ها را تمرین کرده‌ای"
-                : goal > 0 ? "به هدف امروز رسیدی" : "فعلاً مرورِ آماده‌ای نداری"
-            let detail = planner.scheduledToday > 0 ? "مرورهای بعدی هنوز آماده نیستند. اگر دوست داری، کمی بیشتر تمرین کن."
-                : "اگر دوست داری، واژه‌های آشنا را دوباره به یاد بیاور."
-            let button = planner.difficultCards.isEmpty ? "تمرین بیشتر" : "تمرین واژه‌های دشوار"
-            return (title, detail, button)
+            let title: String
+            if planner.reachedGoalToday {
+                title = "آفرین! امروز \(fa(planner.introducedToday)) واژهٔ تازه تمرین کردی."
+            } else if planner.remainingNew == 0 {
+                title = "همهٔ واژه‌ها را تمرین کرده‌ای"
+            } else {
+                title = "فعلاً مرورِ آماده‌ای نداری"
+            }
+            return (title, nil, "تمرین بیشتر")
         case .setGoal:
             return ("آمادهٔ یادگیری هستی؟", "برای شروع، تعداد واژه‌های جدید روزانه را انتخاب کن.", "انتخاب هدف روزانه")
         case .browse:
-            return ("مجموعه‌ات را بساز", "برای شروع تمرین، یک واژه با معنی فارسی اضافه کن.", "رفتن به واژه‌ها")
+            return ("مجموعه‌ات را بساز", "برای شروع، یک واژه با معنی فارسی اضافه کن.", "رفتن به واژه‌ها")
         }
     }
 
@@ -231,17 +255,101 @@ struct Library: View {
         let session: QuizSession
     }
 
-    private func startQuiz(with practiced: [Card]) {
+    private func optionalPracticePanel(_ planner: StudyPlanner) -> some View {
+        DisclosureGroup(isExpanded: $showsPractice) {
+            if showsPractice { practiceActivities(planner) }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("تمرین اختیاری").font(HeadingFont.section)
+                Text("آزمون چهارگزینه‌ای، مرور آزاد و تمرین واژه‌های دشوار")
+                    .font(PersianFont.subheadline)
+                    .foregroundStyle(Palette.muted)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .modifier(Panel())
+    }
+
+    private func practiceActivities(_ planner: StudyPlanner) -> some View {
         var random = SystemRandomNumberGenerator()
         let questions = QuizSession.makeQuestions(
-            practicedCards: practiced, distractorPool: cards, limit: 10, using: &random
+            practicedCards: planner.practicedCards, distractorPool: cards, limit: 10, using: &random
         )
-        if questions.isEmpty {
-            quizUnavailable = true
-        } else {
-            TapCue.open.play()
-            quiz = QuizPresentation(session: QuizSession(questions: questions))
+        let hasPracticed = !planner.practicedCards.isEmpty
+        return VStack(alignment: .leading, spacing: 8) {
+            Divider()
+            if hasPracticed {
+                if !questions.isEmpty {
+                    Button {
+                        TapCue.open.play()
+                        quiz = QuizPresentation(session: QuizSession(questions: questions))
+                    } label: {
+                        practiceActivity("آزمون چهارگزینه‌ای", icon: "checklist",
+                                         detail: "معنی فارسی واژه‌هایی را که تمرین کرده‌ای انتخاب کن.")
+                    }
+                } else {
+                    practiceActivity("آزمون چهارگزینه‌ای", icon: "lock",
+                                     detail: "برای ساختن چهار گزینهٔ متفاوت، واژه‌های بیشتری لازم است.")
+                }
+                Button {
+                    startOptionalPractice(planner.practicedCards, planner: planner)
+                } label: {
+                    practiceActivity("مرور آزاد", icon: "rectangle.on.rectangle",
+                                     detail: "معنی واژه‌های آشنا را به یاد بیاور، بعد پاسخ را ببین.")
+                }
+                if let plan = planner.optionalPlan(for: planner.difficultCards) {
+                    Button { open(plan) } label: {
+                        practiceActivity("تمرین واژه‌های دشوار", icon: "arrow.counterclockwise")
+                    }
+                }
+                if !planner.masteredCards.isEmpty {
+                    Button {
+                        startOptionalPractice(planner.masteredCards, planner: planner)
+                    } label: {
+                        practiceActivity("تمرین واژه‌های تثبیت‌شده", icon: "checkmark.circle")
+                    }
+                }
+                Text("زمان مرورهای برنامه‌ریزی‌شده با این تمرین‌ها تغییر نمی‌کند.")
+                    .font(PersianFont.subheadline)
+                    .foregroundStyle(Palette.muted)
+            } else {
+                practiceActivity("آزمون چهارگزینه‌ای", icon: "lock")
+                practiceActivity("مرور آزاد", icon: "lock")
+                Text("بعد از تمرین اولین واژه، می‌توانی آزمون بدهی یا مرور آزاد را شروع کنی.")
+                    .font(PersianFont.subheadline)
+                    .foregroundStyle(Palette.muted)
+                Button {
+                    selection = .vocabulary
+                } label: {
+                    practiceActivity("دیدن مجموعهٔ واژه‌ها", icon: "book")
+                }
+            }
         }
+        .padding(.top, 6)
+        .buttonStyle(.plain)
+    }
+
+    private func practiceActivity(_ title: String, icon: String, detail: String? = nil) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(PersianFont.emphasis)
+                if let detail {
+                    Text(detail).font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+                }
+            }
+        } icon: {
+            Image(systemName: icon).accessibilityHidden(true)
+        }
+        .foregroundStyle(icon == "lock" ? Palette.muted : Palette.sage)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(icon == "lock" ? "هنوز در دسترس نیست" : "")
+    }
+
+    private func startOptionalPractice(_ pool: [Card], planner: StudyPlanner) {
+        if let plan = planner.optionalPlan(for: pool.shuffled()) { open(plan) }
     }
 
     private var dailyGoalPicker: some View {
@@ -254,28 +362,58 @@ struct Library: View {
         .frame(minHeight: 44)
     }
 
-    private func masteryPanel(_ planner: StudyPlanner) -> some View {
-        let mastered = planner.masteredCards.count
-        let total = planner.status.count
+    private func masteryPanel(_ mastery: MasteryBreakdown) -> some View {
+        let stages: [(String, Int, Color)] = [
+            ("تثبیت‌شده", mastery.mastered, Palette.sage),
+            ("در حال یادگیری", mastery.learning, Palette.learningProgress),
+            ("جدید", mastery.new, Palette.border)
+        ]
         return VStack(alignment: .leading, spacing: 10) {
             Text("تسلط بر واژه‌ها").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
-            Text("\(fa(mastered)) واژهٔ تثبیت‌شده از \(fa(total)) واژه").font(PersianFont.emphasis)
-            ProgressView(value: Double(mastered), total: Double(max(1, total)))
-                .progressViewStyle(StudyProgressStyle())
-                .accessibilityLabel("سهم واژه‌های تثبیت‌شده")
-            Text("\(fa(planner.introducedCount - mastered)) در حال یادگیری · \(fa(planner.remainingNew)) جدید")
-                .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+            if mastery.total == 0 {
+                Text("هنوز واژه‌ای در مجموعه نیست.").foregroundStyle(Palette.muted)
+            } else {
+                GeometryReader { geometry in
+                    HStack(spacing: 0) {
+                        ForEach(stages.indices, id: \.self) { index in
+                            Rectangle().fill(stages[index].2)
+                                .frame(width: geometry.size.width * mastery.fraction(stages[index].1))
+                        }
+                    }
+                    .clipShape(Capsule())
+                }
+                .frame(height: 8)
+                .accessibilityHidden(true)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { masteryLegend(stages) }
+                        .fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 6) { masteryLegend(stages) }
+                }
+            }
         }
         .modifier(Panel())
     }
 
+    private func masteryLegend(_ stages: [(String, Int, Color)]) -> some View {
+        ForEach(stages.indices, id: \.self) { index in
+            let (label, count, color) = stages[index]
+            HStack(spacing: 5) {
+                Circle().fill(color).frame(width: 8, height: 8).accessibilityHidden(true)
+                Text("\(fa(count)) \(label)").font(PersianFont.subheadline)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityValue("\(fa(count)) واژه")
+        }
+    }
+
     private func progress(_ planner: StudyPlanner) -> some View {
-        Page {
+        Page(avoidsFloatingTabBar: true) {
             Heading(title: "پیشرفت", subtitle: "تسلط با یادآوری درست در چند نوبتِ بافاصله به دست می‌آید.")
-            masteryPanel(planner)
+            masteryPanel(planner.mastery)
             VStack(alignment: .leading, spacing: 12) {
                 Text("مرور").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
-                Text("\(fa(planner.scheduledToday)) واژه برای مرور تا پایان امروز")
+                Text("\(fa(planner.scheduledLaterToday)) واژه برای مرور در ادامهٔ امروز")
                 Text("\(fa(planner.dueCards.count)) واژه آمادهٔ مرور")
                 Text("\(fa(planner.difficultCards.count)) واژهٔ دشوار برای تمرین بیشتر")
             }
