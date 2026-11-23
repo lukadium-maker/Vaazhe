@@ -191,12 +191,11 @@ private struct QuizResultView: View {
                     .stroke(Palette.sage, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .padding(2)
-                Image(systemName: perfect ? "checkmark.seal.fill" : "checkmark")
-                    .font(.system(size: 41, weight: .medium))
-                    .foregroundStyle(Palette.sage)
+                ElephantMascot()
+                    .frame(width: 100, height: 100)
                     .scaleEffect(entered || reduceMotion ? 1 : 0.72)
             }
-            .frame(width: 102, height: 102)
+            .frame(width: 118, height: 118)
             .frame(width: 174, height: 156)
             .overlay {
                 if perfect && !reduceMotion { sparkleBurst }

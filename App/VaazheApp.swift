@@ -94,8 +94,18 @@ struct Library: View {
             }
 
             VStack(alignment: .leading, spacing: 14) {
-                Image(systemName: "sun.horizon").font(.title).foregroundStyle(Palette.sage).accessibilityHidden(true)
-                Text("سلام! آماده‌ای تمرین کنیم؟").font(HeadingFont.large).accessibilityAddTraits(.isHeader)
+                let hasPractice = !planner.newCards.isEmpty || !planner.dueCards.isEmpty
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        todayGreeting(hasPractice: hasPractice).fixedSize(horizontal: true, vertical: false)
+                        Spacer(minLength: 0)
+                        ElephantMascot(finished: !hasPractice).frame(width: 88, height: 88)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        ElephantMascot(finished: !hasPractice).frame(width: 88, height: 88)
+                        todayGreeting(hasPractice: hasPractice)
+                    }
+                }
                 HStack {
                     Text("هدف روزانه").font(PersianFont.subheadline).foregroundStyle(Palette.muted)
                         .accessibilityHidden(true)
@@ -142,6 +152,16 @@ struct Library: View {
                 Label("مجموعهٔ اصلی بارگذاری نشد. واژه‌های شخصی همچنان در دسترس‌اند.", systemImage: "exclamationmark.circle")
             }
         }
+    }
+
+    private func todayGreeting(hasPractice: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("سلام!")
+            Text(hasPractice ? "آماده‌ای تمرین کنیم؟" : "فعلاً وقت استراحت است")
+        }
+        .font(HeadingFont.title)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private struct QuizPresentation: Identifiable {
