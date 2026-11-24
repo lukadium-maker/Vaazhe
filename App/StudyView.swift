@@ -4,6 +4,7 @@ import SwiftData
 struct StudyView: View {
     @State private var session: StudySession
     @State private var failed = false
+    @State private var visibleAttempt: UUID?
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -24,26 +25,42 @@ struct StudyView: View {
         NavigationStack {
             Page {
                 if let card = session.currentCard {
+                    let attempt = session.attemptID
                     let queue = session.queue
-                    Text("\(fa(queue.cards.count)) کارت در صف").font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-                    ProgressView(value: Double(queue.count), total: Double(queue.count + queue.cards.count))
-                        .progressViewStyle(StudyProgressStyle())
-                        .accessibilityLabel("پیشرفت تمرین")
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("\(fa(queue.cards.count)) کارت در صف")
+                                .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+                            ProgressView(value: Double(queue.count), total: Double(queue.count + queue.cards.count))
+                                .progressViewStyle(StudyProgressStyle())
+                                .accessibilityLabel("پیشرفت تمرین")
+                        }
+                        if queue.count == 0, !session.plan.newIDs.isEmpty {
+                            ElphyMascotView(mood: .studying, size: 46, animatesAppearance: true)
+                        }
+                    }
                     if !session.isRevealed, session.lastRating == .again {
                         HStack {
-                            ElephantMascot(mood: .encouraging).frame(width: 34, height: 30)
-                            Text("اشکالی ندارد. آرام ادامه بده.")
+                            ElphyMascotView(mood: .encouraging, size: 40, animatesAppearance: true)
+                            Text("اشکالی نداره، دوباره تمرین می‌کنیم.")
                                 .font(PersianFont.subheadline)
                                 .foregroundStyle(Palette.muted)
                         }
                     }
-                    CardContent(card: card, revealed: session.isRevealed).id(session.attemptID)
+                    CardContent(card: card, revealed: session.isRevealed)
+                        .opacity(reduceMotion || visibleAttempt == attempt ? 1 : 0.86)
+                        .onAppear {
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                                visibleAttempt = attempt
+                            }
+                        }
                     if session.isRevealed {
                         let currentAttempt = session.attemptID
                         Text("چقدر خوب به یاد آوردی؟").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
                         ratingButtons(attemptID: currentAttempt)
                     } else {
                         Button("نمایش معنی") {
+                            guard session.attemptID == attempt, !session.isRevealed else { return }
                             TapCue.reveal.play()
                             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { session.reveal() }
                         }
@@ -56,7 +73,7 @@ struct StudyView: View {
                     Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
-                        ElephantMascot(mood: .celebrating).frame(width: 76, height: 66)
+                        ElphyMascotView(mood: completionMood, size: 76, animatesAppearance: completionMood != .sleepy)
                         Heading(title: "تمرین تمام شد",
                                 subtitle: session.plan.mode == .scheduled
                                     ? "آفرین! مرورهای بعدی طبق برنامه پیش می‌روند."
@@ -77,7 +94,15 @@ struct StudyView: View {
             .persianNavigationTitle(title)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("بستن") { dismiss() } } }
         }
+        .sensoryFeedback(.selection, trigger: session.attemptID)
         .alert("ذخیرهٔ مرور ممکن نشد", isPresented: $failed) { Button("باشه", role: .cancel) {} }
+    }
+
+    private var completionMood: ElphyMascotView.Mood {
+        if session.plan.mode == .scheduled {
+            return session.newCardsPracticed > 0 ? .proud : .celebrating
+        }
+        return session.queue.needsPractice.isEmpty ? .sleepy : .encouraging
     }
 
     private func ratingButtons(attemptID: UUID) -> some View {
@@ -131,7 +156,7 @@ private enum AnyStudyButton: ButtonStyle {
                 .padding(12)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: 16))
-                .opacity(configuration.isPressed ? 0.7 : 1)
+                .modifier(PressFeedback(pressed: configuration.isPressed))
         }
     }
 }
@@ -151,7 +176,13 @@ struct QuizView: View {
                                  total: Double(quiz.questions.count))
                         .progressViewStyle(StudyProgressStyle())
                         .accessibilityLabel("پیشرفت آزمون")
-                    Text("معنی درست را انتخاب کن.").font(HeadingFont.section)
+                    HStack {
+                        Text("معنی درست را انتخاب کن.").font(HeadingFont.section)
+                        if quiz.index == 0 {
+                            ElphyMascotView(mood: .thinking, size: 42, animatesAppearance: true)
+                                .opacity(quiz.selected == nil ? 1 : 0)
+                        }
+                    }
                     Text(question.card.word)
                         .font(.system(.largeTitle, design: .serif).weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -166,11 +197,19 @@ struct QuizView: View {
                     if let selected = quiz.selected {
                         let correct = selected == question.card.meaningFa
                         HStack {
-                            ElephantMascot(mood: correct ? .happy : .encouraging)
-                                .frame(width: 38, height: 36)
-                            Text(correct ? "درست بود!" : "پاسخ درست: \(question.card.meaningFa)")
-                                .font(HeadingFont.section)
-                                .accessibilityAddTraits(.isHeader)
+                            if !correct {
+                                ElphyMascotView(mood: .encouraging, size: 44, animatesAppearance: true)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(correct ? "درست بود!" : "پاسخ درست: \(question.card.meaningFa)")
+                                    .font(HeadingFont.section)
+                                    .accessibilityAddTraits(.isHeader)
+                                if !correct {
+                                    Text("اشکالی نداره، دوباره تمرین می‌کنیم.")
+                                        .font(PersianFont.subheadline)
+                                        .foregroundStyle(Palette.muted)
+                                }
+                            }
                         }
                         examples(for: question.card)
                         Button(quiz.index + 1 == quiz.questions.count ? "دیدن نتیجه" : "پرسش بعدی") {
@@ -268,8 +307,7 @@ private struct QuizResultView: View {
                     .stroke(Palette.sage, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .padding(2)
-                ElephantMascot(mood: perfect ? .celebrating : .happy)
-                    .frame(width: 100, height: 100)
+                ElphyMascotView(mood: perfect ? .celebrating : .encouraging, size: 94)
                     .scaleEffect(entered || reduceMotion ? 1 : 0.72)
             }
             .frame(width: 118, height: 118)

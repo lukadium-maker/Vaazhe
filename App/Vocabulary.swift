@@ -152,6 +152,32 @@ enum ReviewClock {
     }
 }
 
+struct DailyLearningProgress: Equatable {
+    let day: Date
+    let count: Int
+    let target: Int
+    let configuredGoal: Int
+
+    var fraction: Double {
+        target > 0 ? min(1, Double(count) / Double(target)) : 0
+    }
+
+    func reachedGoal(since previous: Self) -> Bool {
+        day == previous.day && target > 0 && target == previous.target &&
+            configuredGoal == previous.configuredGoal && previous.count < target && count >= target
+    }
+}
+
+enum TodayLearningState: Equatable {
+    case goalComplete(action: StudyPlan.Mode?)
+    case next(StudyPlanner.NextAction)
+
+    init(planner: StudyPlanner) {
+        self = planner.reachedGoalToday ? .goalComplete(action: planner.completionPlan()?.mode)
+            : .next(planner.nextAction)
+    }
+}
+
 struct MasteryBreakdown {
     let mastered: Int
     let learning: Int
@@ -246,6 +272,20 @@ struct StudyPlanner {
     var dailyPlan: StudyPlan? {
         guard !dueCards.isEmpty || !newCards.isEmpty else { return nil }
         return StudyPlan(cards: dueCards + newCards, newIDs: Set(newCards.map(\.id)))
+    }
+
+    func completionPlan(shufflePractice: Bool = false) -> StudyPlan? {
+        if !dueCards.isEmpty {
+            return StudyPlan(cards: dueCards, newIDs: [])
+        }
+        return morePracticePlan(shuffle: shufflePractice)
+    }
+
+    func morePracticePlan(shuffle: Bool) -> StudyPlan? {
+        let pool = difficultCards.isEmpty
+            ? (shuffle ? practicedCards.shuffled() : practicedCards)
+            : difficultCards
+        return optionalPlan(for: pool)
     }
 
     var difficultPlan: StudyPlan {
