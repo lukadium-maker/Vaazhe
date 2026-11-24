@@ -85,7 +85,7 @@ import SwiftData
         self.directory = directory
         let schema = Schema([PersonalCard.self, ReviewState.self, ReviewEvent.self,
                              ReadingProgress.self, DailyReadingPick.self, SimulationCheckpoint.self,
-                             SimulationReadingCompletion.self])
+                             SimulationReadingCompletion.self, PracticeSessionRecord.self])
         let configuration = ModelConfiguration("Simulation", schema: schema, url: url, cloudKitDatabase: .none)
         container = try ModelContainer(for: schema, configurations: [configuration])
     }
@@ -102,7 +102,8 @@ import SwiftData
     }
 
     static func start(at date: Date, calendar: Calendar, in directory: URL, defaults: UserDefaults = .standard,
-                      copying source: (vocabulary: ModelContext, reading: ModelContext)? = nil) throws -> DeveloperSimulation {
+                      copying source: (vocabulary: ModelContext, reading: ModelContext)? = nil,
+                      practice: ModelContext? = nil) throws -> DeveloperSimulation {
         let session = Session(id: UUID(), started: date, date: date, calendar: calendar)
         let simulation = try DeveloperSimulation(session: session, directory: directory, create: true)
         if let source {
@@ -118,7 +119,13 @@ import SwiftData
                 }
             }
             for pick in try source.reading.fetch(FetchDescriptor<DailyReadingPick>()) {
-                destination.insert(DailyReadingPick(dayKey: pick.dayKey, storyID: pick.storyID))
+                destination.insert(DailyReadingPick(dayKey: pick.dayKey, storyID: pick.storyID, isRevision: pick.isRevision))
+            }
+            if let practice {
+                for record in try practice.fetch(FetchDescriptor<PracticeSessionRecord>()) {
+                    destination.insert(PracticeSessionRecord(id: record.id, date: record.date, payload: record.payload,
+                                                             sequence: record.sequence, copiedBaseline: true))
+                }
             }
             try ReviewStore.save(destination)
             simulation.preferences.set(defaults.object(forKey: "dailyGoal"), forKey: "dailyGoal")
@@ -188,7 +195,16 @@ import SwiftData
 
     func resetDay() throws {
         let context = container.mainContext
-        guard let checkpoint = try checkpoint(for: day.key, in: context) else { throw Failure.missingCheckpoint }
+        let checkpoint = try checkpoint(for: day.key, in: context)
+        let practice = try context.fetch(FetchDescriptor<PracticeSessionRecord>()).filter {
+            !$0.copiedBaseline && calendar.isDate($0.date, inSameDayAs: date)
+        }
+        guard let checkpoint else {
+            guard !practice.isEmpty else { throw Failure.missingCheckpoint }
+            for record in practice { context.delete(record) }
+            try ReviewStore.save(context)
+            return
+        }
         let current = try LearningSnapshot(vocabulary: context, reading: context)
         if let latest = current.latestActivity, calendar.startOfDay(for: latest) > calendar.startOfDay(for: date) {
             throw Failure.pastActivity
@@ -204,6 +220,7 @@ import SwiftData
         }))
         // Restore in place so SwiftData retains one row per unique key throughout the transaction.
         try snapshot.restore(in: context)
+        for record in practice { context.delete(record) }
         for completion in completions { context.delete(completion) }
         for checkpoint in invalidated { context.delete(checkpoint) }
         try ReviewStore.save(context)
@@ -215,7 +232,9 @@ import SwiftData
         let picks = try context.fetch(FetchDescriptor<DailyReadingPick>())
         let checkpoints = try context.fetch(FetchDescriptor<SimulationCheckpoint>())
         let completions = try readingCompletions()
+        let practice = try context.fetch(FetchDescriptor<PracticeSessionRecord>())
         try LearningSnapshot.empty.restore(in: context)
+        for record in practice { context.delete(record) }
         for pick in picks { context.delete(pick) }
         for checkpoint in checkpoints { context.delete(checkpoint) }
         for completion in completions { context.delete(completion) }

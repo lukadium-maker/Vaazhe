@@ -222,31 +222,36 @@ enum ReadingRecommendationEngine {
         let recentIDs = Set(recalls.filter { (recentCutoff...now).contains($0.date) }.map(\.cardID))
             .union(progress.filter { (recentCutoff...now).contains($0.value.introduced) }.keys)
 
+        let vocabularySize = progress.values.filter { $0.introduced <= now }.count
+        let targetLevel: ReadingLevel = vocabularySize >= 90 ? .b1 : vocabularySize >= 40 ? .a2 : .a1
+        let allCompleted = !stories.isEmpty && stories.allSatisfy {
+            let record = records[$0.id]
+            return record?.completed == true && record?.lastCompletion.map { $0 <= now } != false
+        }
         let scored = stories.map { story in
-            let matches = story.targetWordIds.filter { progress[$0] != nil }
+            let matches = story.targetWordIds.filter { progress[$0].map { $0.introduced <= now } == true }
             let vocabularyScore = matches.reduce(0) { score, id in
                 let status = statuses[id]
                 return score + (status?.stage == .mastered ? 1 : 3) +
-                    (status?.isDifficult == true ? 5 : 0) + (recentIDs.contains(id) ? 4 : 0)
+                    (status?.isDifficult == true ? (allCompleted ? 12 : 5) : 0) + (recentIDs.contains(id) ? 4 : 0)
             }
             let record = records[story.id]
             let recentlyCompleted = record?.lastCompletion.map { (recentCutoff...now).contains($0) } ?? false
             let penalty = (record?.read == true ? 2 : 0) + (record?.completed == true ? 1 : 0)
                 + (recentlyCompleted ? 5 : 0)
             let recommendation = Recommendation(storyID: story.id, matchingVocabularyIDs: matches,
-                                                score: vocabularyScore + story.level.beginnerPriority - penalty)
+                                                score: vocabularyScore + (story.level == targetLevel ? 4 : 0) +
+                                                    (targetLevel == .a1 ? story.level.beginnerPriority : 0) - penalty)
             return (story: story, result: recommendation)
         }
-        let personalized = scored.filter { !$0.result.matchingVocabularyIDs.isEmpty }
-        let beginners = scored.filter { $0.story.level == .a1 }
-        let suitable = personalized.isEmpty ? (beginners.isEmpty ? scored : beginners) : personalized
+        let unfinished = scored.filter {
+            let record = records[$0.story.id]
+            return record?.completed != true || record?.lastCompletion.map { $0 > now } == true
+        }
+        let suitable = unfinished.isEmpty ? scored : unfinished
         let otherStories = suitable.filter { $0.story.id != previousStoryID }
         let pool = otherStories.isEmpty ? suitable : otherStories
-        let alternatives = pool.filter { candidate in
-            guard let date = records[candidate.story.id]?.lastCompletion else { return true }
-            return !calendar.isDate(date, inSameDayAs: now)
-        }
-        return (alternatives.isEmpty ? pool : alternatives).sorted { left, right in
+        return pool.sorted { left, right in
             if left.result.score != right.result.score { return left.result.score > right.result.score }
             let leftDate = records[left.story.id]?.lastCompletion ?? .distantPast
             let rightDate = records[right.story.id]?.lastCompletion ?? .distantPast

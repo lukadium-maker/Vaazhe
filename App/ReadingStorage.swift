@@ -22,6 +22,7 @@ import SwiftData
 @Model final class DailyReadingPick {
     @Attribute(.unique) var dayKey: String
     var storyID: String
+    var isRevision: Bool?
 
     init(day: ReadingDay, storyID: String) {
         self.dayKey = day.key
@@ -29,9 +30,10 @@ import SwiftData
     }
 
     #if DEBUG
-    init(dayKey: String, storyID: String) {
+    init(dayKey: String, storyID: String, isRevision: Bool? = nil) {
         self.dayKey = dayKey
         self.storyID = storyID
+        self.isRevision = isRevision
     }
     #endif
 }
@@ -67,12 +69,35 @@ import SwiftData
                              progress: [String: StudyPlanner.Progress], recalls: [Recall],
                              records: [String: ReadingRecord], at date: Date,
                              calendar: Calendar, in context: ModelContext) throws -> String? {
-        try dailyStoryID(at: date, calendar: calendar, availableIDs: Set(stories.map(\.id)), in: context) { previousID in
+        try dailyAssignment(stories: stories, planner: planner, progress: progress, recalls: recalls,
+                            records: records, at: date, calendar: calendar, in: context)?.storyID
+    }
+
+    static func dailyAssignment(stories: [ReadingStory], planner: StudyPlanner,
+                                progress: [String: StudyPlanner.Progress], recalls: [Recall],
+                                records: [String: ReadingRecord], at date: Date,
+                                calendar: Calendar, in context: ModelContext) throws -> DailyReadingPick? {
+        let day = ReadingDay(at: date, calendar: calendar)
+        let start = calendar.startOfDay(for: date)
+        var available = Set(stories.map(\.id))
+        let previousCompletion = Set(available.filter { records[$0]?.lastCompletion.map { $0 < start } == true })
+        if let legacy = try pick(for: day, in: context), legacy.isRevision == nil,
+           previousCompletion.contains(legacy.storyID), previousCompletion != available,
+           stories.contains(where: { records[$0.id]?.completed != true }) {
+            available.remove(legacy.storyID)
+        }
+        let id = try dailyStoryID(at: date, calendar: calendar, availableIDs: available, in: context) { previousID in
             ReadingRecommendationEngine.recommend(
-                stories: stories, statuses: planner.status, progress: progress,
+                stories: stories.filter { available.contains($0.id) }, statuses: planner.status, progress: progress,
                 recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID
             )?.storyID
         }
+        guard let id, let assignment = try pick(for: day, in: context) else { return nil }
+        if assignment.isRevision == nil {
+            assignment.isRevision = previousCompletion.contains(id)
+            try save(context)
+        }
+        return assignment
     }
 
     static func dailyStoryID(at date: Date, calendar: Calendar, availableIDs: Set<String>,
@@ -86,6 +111,7 @@ import SwiftData
         guard let selected = select(previousID), availableIDs.contains(selected) else { return nil }
         if let existing {
             existing.storyID = selected
+            existing.isRevision = nil
         } else {
             context.insert(DailyReadingPick(day: today, storyID: selected))
         }

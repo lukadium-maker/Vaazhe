@@ -190,6 +190,24 @@ struct MasteryBreakdown {
     }
 }
 
+struct DailyWorkloadPolicy {
+    var reviewLimit = 25
+    var newWordLimits = [(through: 15, limit: 10), (through: 25, limit: 10),
+                         (through: 40, limit: 5), (through: 60, limit: 3)]
+    var recoveryThreshold = 26
+    var secondsPerNewWord = 24
+    var secondsPerReview = 10
+
+    func newWordLimit(for reviewDemand: Int, preference: Int) -> Int {
+        let limit = newWordLimits.first { reviewDemand <= $0.through }?.limit ?? 0
+        return max(0, min(limit, preference))
+    }
+
+    func estimatedMinutes(new: Int, reviews: Int) -> Int {
+        (new * secondsPerNewWord + reviews * secondsPerReview + 59) / 60
+    }
+}
+
 struct StudyPlanner {
     struct Progress {
         let introduced: Date
@@ -204,6 +222,15 @@ struct StudyPlanner {
 
     let newCards: [Card]
     let dueCards: [Card]
+    let recommendedReviews: [Card]
+    let reviewedToday: Int
+    let isRecoveryDay: Bool
+    let estimatedMinutes: Int
+    var additionalDueCount: Int { dueCards.count - recommendedReviews.count }
+    var completedCoreToday: Bool {
+        recommendedReviews.isEmpty && newCards.isEmpty && (introducedToday > 0 || reviewedToday > 0)
+    }
+    private let reviewLimit: Int
     let scheduledLaterToday: Int
     let introducedCount: Int
     let introducedToday: Int
@@ -220,7 +247,8 @@ struct StudyPlanner {
     private let cardsIntroducedToday: [Card]
 
     init(cards: [Card], progress: [String: Progress], goal: Int,
-         at date: Date, calendar: Calendar, recalls: [Recall] = []) {
+         at date: Date, calendar: Calendar, recalls: [Recall] = [],
+         workload: DailyWorkloadPolicy = DailyWorkloadPolicy()) {
         let history = Dictionary(grouping: recalls.filter { $0.date <= date }, by: \.cardID)
         let active = cards.filter { progress[$0.id] != nil }
         let fresh = cards.filter { progress[$0.id] == nil }
@@ -234,12 +262,48 @@ struct StudyPlanner {
         introducedToday = seenToday
         remainingNew = fresh.count
         remainingStarter = fresh.filter { !$0.isPersonal }.count
-        effectiveGoal = min(max(0, goal), seenToday + fresh.count)
-        newCards = Array(available.prefix(max(0, goal - seenToday)))
         let scheduled = active.compactMap { card -> (card: Card, due: Date)? in
             progress[card.id].map { (card, $0.due) }
         }
-        dueCards = scheduled.filter { $0.due <= date }.sorted { $0.due < $1.due }.map(\.card)
+        let due = scheduled.filter { $0.due <= date }
+        let dayStart = calendar.startOfDay(for: date)
+        let misses = history.mapValues {
+            $0.sorted { $0.date > $1.date }.prefix(5).filter { $0.rating == .again }.count
+        }
+        let orderedDue = due.sorted { left, right in
+            let leftDay = calendar.startOfDay(for: left.due)
+            let rightDay = calendar.startOfDay(for: right.due)
+            if leftDay != rightDay { return leftDay < rightDay }
+            let leftMisses = misses[left.card.id, default: 0]
+            let rightMisses = misses[right.card.id, default: 0]
+            if leftMisses != rightMisses { return leftMisses > rightMisses }
+            let leftStability = progress[left.card.id]?.days ?? 0
+            let rightStability = progress[right.card.id]?.days ?? 0
+            if leftStability != rightStability { return leftStability < rightStability }
+            if left.due != right.due { return left.due < right.due }
+            return left.card.id < right.card.id
+        }.map(\.card)
+        dueCards = orderedDue
+        let firstActivity = recalls.lazy.filter { $0.date >= dayStart && $0.date <= date }.map(\.date).min()
+        let reviewCutoff = firstActivity ?? date
+        let attempted = Set(active.filter { card in
+            progress[card.id].map { $0.introduced < dayStart } == true &&
+            history[card.id, default: []].contains { $0.date >= dayStart }
+        }.map(\.id))
+        let unattempted = orderedDue.filter { card in
+            !attempted.contains(card.id) && progress[card.id].map {
+                $0.introduced < dayStart && $0.due <= reviewCutoff
+            } == true
+        }
+        reviewedToday = attempted.count
+        let reviewDemand = unattempted.count + attempted.count
+        reviewLimit = max(0, workload.reviewLimit)
+        recommendedReviews = Array(unattempted.prefix(max(0, workload.reviewLimit - attempted.count)))
+        isRecoveryDay = reviewDemand >= workload.recoveryThreshold
+        let target = workload.newWordLimit(for: reviewDemand, preference: goal)
+        effectiveGoal = min(target, seenToday + fresh.count)
+        newCards = Array(available.prefix(max(0, target - seenToday)))
+        estimatedMinutes = workload.estimatedMinutes(new: newCards.count, reviews: recommendedReviews.count)
         let tomorrow = calendar.dateInterval(of: .day, for: date)?.end ?? date
         nextDue = scheduled.map(\.due).filter { $0 > date }.min()
         scheduledLaterToday = scheduled.filter { date < $0.due && $0.due < tomorrow }.count
@@ -273,13 +337,13 @@ struct StudyPlanner {
     }
 
     var dailyPlan: StudyPlan? {
-        guard !dueCards.isEmpty || !newCards.isEmpty else { return nil }
-        return StudyPlan(cards: dueCards + newCards, newIDs: Set(newCards.map(\.id)))
+        guard !recommendedReviews.isEmpty || !newCards.isEmpty else { return nil }
+        return StudyPlan(cards: recommendedReviews + newCards, newIDs: Set(newCards.map(\.id)))
     }
 
     func completionPlan(shufflePractice: Bool = false) -> StudyPlan? {
         if !dueCards.isEmpty {
-            return StudyPlan(cards: dueCards, newIDs: [])
+            return StudyPlan(cards: Array(dueCards.prefix(reviewLimit)), newIDs: [])
         }
         return morePracticePlan(shuffle: shufflePractice)
     }

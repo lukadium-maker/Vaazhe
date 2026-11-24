@@ -51,11 +51,7 @@ struct SettingsView: View {
                 .listRowBackground(Palette.card)
                 #endif
                 Section("تمرین") {
-                    Picker("هدف روزانه", selection: $goal) {
-                        ForEach(DailyGoal.choices(including: goal), id: \.self) { count in
-                            Text(count == 0 ? "فقط مرور" : "\(fa(count)) واژهٔ جدید").tag(count)
-                        }
-                    }
+                    DailyGoalSelector(goal: $goal)
                     Toggle("صدای لمس", isOn: $tapSounds)
                         .onChange(of: tapSounds) { _, enabled in
                             if enabled {
@@ -160,5 +156,75 @@ struct SettingsView: View {
         for event in events { context.delete(event) }
         do { try ReviewStore.save(context) }
         catch { message = "پیشرفت داستان‌خوانی پاک شد، اما پاک کردن مرور واژه‌ها ممکن نشد. دوباره امتحان کن." }
+    }
+}
+
+
+struct DailyGoalSelector: View {
+    @Binding var goal: Int
+    @State private var showsChoices = false
+
+    var body: some View {
+        Button {
+            showsChoices = true
+        } label: {
+            HStack(spacing: 8) {
+                Text(title(for: goal))
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .accessibilityHidden(true)
+            }
+            .font(DashboardFont.action)
+            .foregroundStyle(Palette.sage)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
+            .background(Palette.tint, in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("هدف روزانه")
+        .accessibilityValue(title(for: goal))
+        .sheet(isPresented: $showsChoices) {
+            NavigationStack {
+                Page {
+                    VStack(spacing: 4) {
+                        ForEach(DailyGoal.choices(including: goal), id: \.self) { count in
+                            Button {
+                                goal = count
+                                showsChoices = false
+                            } label: {
+                                HStack {
+                                    Text(title(for: count)).font(PersianFont.emphasis)
+                                    Spacer()
+                                    if goal == count {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(Palette.sage)
+                                            .accessibilityHidden(true)
+                                    }
+                                }
+                                .padding(.vertical, 6)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(goal == count ? .isSelected : [])
+                        }
+                    }
+                    .modifier(Panel())
+                }
+                .persianNavigationTitle("هدف روزانه")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("بستن") { showsChoices = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private func title(for count: Int) -> String {
+        count == 0 ? "فقط مرور" : "\(fa(count)) واژهٔ جدید"
     }
 }
