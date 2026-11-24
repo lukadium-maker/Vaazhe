@@ -59,6 +59,16 @@ import SwiftData
         self.rating = rating.rawValue
     }
 
+    #if DEBUG
+    init(attemptID: UUID, cardID: String, word: String, date: Date, rating: String) {
+        self.attemptID = attemptID
+        self.cardID = cardID
+        self.word = word
+        self.date = date
+        self.rating = rating
+    }
+    #endif
+
     var recall: Recall? {
         Rating(rawValue: rating).map { Recall(cardID: cardID, date: date, rating: $0) }
     }

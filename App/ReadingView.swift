@@ -19,6 +19,7 @@ struct ReadingLibrary: View {
     @State private var filter: ReadingFilter = .all
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(AppClock.self) private var clock
 
     init(stories: [ReadingStory], cards: [String: Card], statuses: [String: VocabularyStatus],
          vocabularyProgress: [String: StudyPlanner.Progress], recalls: [Recall], now: Date,
@@ -43,7 +44,7 @@ struct ReadingLibrary: View {
             Page {
                 if let recommendation = ReadingRecommendationEngine.recommend(
                     stories: stories, statuses: statuses, progress: vocabularyProgress,
-                    recalls: recalls, records: records, at: now
+                    recalls: recalls, records: records, at: now, calendar: clock.calendar
                 ), let featured = stories.first(where: { $0.id == recommendation.storyID }) {
                     ReadingRecommendationCard(story: featured,
                                               matchingVocabularyCount: recommendation.matchingVocabularyIDs.count,
@@ -387,8 +388,9 @@ private struct ReadingPassageView: View {
     let startQuiz: () -> Void
 
     @Environment(\.modelContext) private var context
-    @AppStorage("voice") private var voice = EnglishAccent.american.rawValue
-    @AppStorage("slowPronunciation") private var slowPronunciation = false
+    @Environment(AppClock.self) private var clock
+    @AppStorage("voice", store: .standard) private var voice = EnglishAccent.american.rawValue
+    @AppStorage("slowPronunciation", store: .standard) private var slowPronunciation = false
     @State private var definition: Card?
     @State private var errorMessage: String?
     @State private var savedRead = false
@@ -495,7 +497,7 @@ private struct ReadingPassageView: View {
 
     private func recordRead() -> Bool {
         do {
-            try ReadingStore.markRead(story.id, in: context)
+            try clock.markRead(story.id, in: context)
             savedRead = true
             return true
         } catch {
@@ -542,6 +544,7 @@ private struct ReadingQuizView: View {
     let returnToLibrary: () -> Void
 
     @Environment(\.modelContext) private var context
+    @Environment(AppClock.self) private var clock
     @State private var quiz: ReadingQuiz
     @State private var errorMessage: String?
 
@@ -639,7 +642,7 @@ private struct ReadingQuizView: View {
         guard quiz.index == index, quiz.selection != nil else { return }
         if quiz.isFinalAnswer {
             do {
-                try ReadingStore.complete(story, score: quiz.score, in: context)
+                try clock.complete(story, score: quiz.score, in: context)
             } catch {
                 errorMessage = "ذخیرهٔ نتیجهٔ آزمون ممکن نشد. دوباره امتحان کن."
                 return

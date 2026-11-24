@@ -90,6 +90,8 @@ private struct DetailView: View {
     let state: ReviewState?
     let status: VocabularyStatus?
     @Environment(\.modelContext) private var context
+    @Environment(AppClock.self) private var clock
+    @Environment(\.locale) private var locale
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var confirming = false
@@ -102,7 +104,11 @@ private struct DetailView: View {
                 if status?.stage == .mastered { Text("تثبیت‌شده").foregroundStyle(Palette.sage) }
                 if status?.isDifficult == true { Text("نیاز به تمرین بیشتر").foregroundStyle(Palette.muted) }
                 Text("مرور بعدی").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
-                Text(state.due.formatted(.relative(presentation: .named)))
+                if clock.isSimulating {
+                    Text(clock.relativeDate(state.due, to: clock.now, locale: locale))
+                } else {
+                    Text(state.due.formatted(.relative(presentation: .named)))
+                }
             } else {
                 Text("هنوز تمرین نشده").foregroundStyle(Palette.muted)
             }

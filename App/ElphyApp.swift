@@ -8,6 +8,7 @@ import UIKit
     private let deck: [Card]?
     private let readingContainer: ModelContainer?
     private let stories: [ReadingStory]
+    @State private var clock: AppClock
 
     init() {
         container = try? ModelContainer(for: PersonalCard.self, ReviewState.self, ReviewEvent.self)
@@ -15,19 +16,41 @@ import UIKit
         self.deck = deck
         stories = deck.flatMap { try? ReadingContent.load(cards: $0) } ?? []
         readingContainer = try? ReadingStore.makeContainer()
+        let clock = AppClock()
+        #if DEBUG
+        do {
+            let directory = try DeveloperSimulation.directory()
+            clock.simulation = try DeveloperSimulation.resume(in: directory)
+            DeveloperSimulation.removeInactiveProfiles(in: directory, keeping: clock.simulation?.id)
+        } catch {
+            clock.simulationRecoveryError = error.localizedDescription
+        }
+        #endif
+        _clock = State(initialValue: clock)
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let container {
-                    Library(deck: deck, stories: stories, readingContainer: readingContainer)
-                        .modelContainer(container)
+                #if DEBUG
+                if let simulation = clock.simulation {
+                    library(vocabulary: simulation.container, reading: simulation.container)
+                        .defaultAppStorage(simulation.preferences)
+                        .id(simulation.id)
+                } else if let container {
+                    library(vocabulary: container, reading: readingContainer)
                 } else {
-                    ContentUnavailableView("دسترسی به داده‌ها ممکن نیست", systemImage: "externaldrive",
-                                           description: Text("برنامه را ببند و دوباره باز کن."))
+                    unavailable
                 }
+                #else
+                if let container {
+                    library(vocabulary: container, reading: readingContainer)
+                } else {
+                    unavailable
+                }
+                #endif
             }
+            .environment(clock)
             .font(PersianFont.body)
             .environment(\.locale, Locale(identifier: "fa_IR"))
             .environment(\.layoutDirection, .rightToLeft)
@@ -35,6 +58,34 @@ import UIKit
             .tint(Palette.sage)
         }
     }
+
+    private var unavailable: some View {
+        ContentUnavailableView("دسترسی به داده‌ها ممکن نیست", systemImage: "externaldrive",
+                               description: Text("برنامه را ببند و دوباره باز کن."))
+    }
+
+    private func library(vocabulary: ModelContainer, reading: ModelContainer?) -> some View {
+        #if DEBUG
+        Library(deck: deck, stories: stories, readingContainer: reading, startSimulation: startSimulation)
+            .modelContainer(vocabulary)
+        #else
+        Library(deck: deck, stories: stories, readingContainer: reading)
+            .modelContainer(vocabulary)
+        #endif
+    }
+
+    #if DEBUG
+    private func startSimulation(copyProgress: Bool) throws {
+        var source: (ModelContext, ModelContext)?
+        if copyProgress {
+            guard let container, let readingContainer else { throw DeveloperSimulation.Failure.unavailable }
+            source = (container.mainContext, readingContainer.mainContext)
+        }
+        clock.simulation = try DeveloperSimulation.start(at: clock.systemNow, calendar: .current,
+                                                          in: DeveloperSimulation.directory(), copying: source)
+        clock.simulationRecoveryError = nil
+    }
+    #endif
 }
 
 struct Library: View {
@@ -43,6 +94,11 @@ struct Library: View {
     let deck: [Card]?
     let stories: [ReadingStory]
     let readingContainer: ModelContainer?
+    #if DEBUG
+    let startSimulation: (Bool) throws -> Void
+    @State private var showsDeveloperMenu = false
+    @State private var readingRevision = 0
+    #endif
     @Query private var personal: [PersonalCard]
     @Query private var states: [ReviewState]
     @Query(sort: \ReviewEvent.date, order: .reverse) private var events: [ReviewEvent]
@@ -62,21 +118,30 @@ struct Library: View {
     @State private var readingPositions: [String: Double] = [:]
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var now = Date.now
+    @Environment(AppClock.self) private var clock
+    @Environment(\.locale) private var locale
+    @State private var refreshedAt: Date?
+
+    private var now: Date { clock.isSimulating ? clock.now : refreshedAt ?? clock.now }
 
     private var cards: [Card] { (deck ?? []) + personal.map(\.card) }
     private var stateByID: [String: ReviewState] { Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0) }) }
 
     var body: some View {
         let index = stateByID
-        let calendar = Calendar.current
+        let calendar = clock.calendar
         let recalls = events.compactMap(\.recall)
         let planner = makePlanner(at: now, recalls: recalls, calendar: calendar)
         let showsSchedule = selection == .today || selection == .progress
-        let wake = scenePhase == .active && showsSchedule
+        let wake = !clock.isSimulating && scenePhase == .active && showsSchedule
             ? ReviewClock.nextRefresh(at: now, nextDue: planner.nextDue, calendar: calendar) : nil
         let day = ReadingDay(at: now, calendar: calendar)
-        let readingRefreshDay = scenePhase == .active && selection == .today && reading == nil ? day : nil
+        #if DEBUG
+        let readingTask = ReadingRefresh(day: day, revision: readingRevision)
+        #else
+        let readingTask = ReadingRefresh(day: day, revision: 0)
+        #endif
+        let readingRefreshDay = scenePhase == .active && selection == .today && reading == nil ? readingTask : nil
         let dailyProgress = DailyLearningProgress(day: calendar.startOfDay(for: now),
                                                   count: planner.introducedToday, target: planner.effectiveGoal,
                                                   configuredGoal: goal)
@@ -100,18 +165,14 @@ struct Library: View {
                 tabLabel("پیشرفت", destination: .progress, icon: "chart.bar", selectedIcon: "chart.bar.fill")
             }
             Tab(value: Destination.settings) {
-                SettingsView(states: states, events: events, readingContainer: readingContainer) {
-                    readingRecords = [:]
-                    dailyReading = nil
-                    readingPositions = [:]
-                }
+                settings
             } label: {
                 tabLabel("تنظیمات", destination: .settings, icon: "gearshape", selectedIcon: "gearshape.fill")
             }
         }
         .sheet(item: $session, onDismiss: { presentedStudyMode = nil }) { StudyView(plan: $0) }
         .sheet(item: $quiz) { QuizView(quiz: $0.session) }
-        .sheet(item: $reading, onDismiss: { now = .now }) { presentation in
+        .sheet(item: $reading, onDismiss: { refreshClock() }) { presentation in
             if let readingContainer {
                 ReadingLibrary(stories: stories,
                                cards: Dictionary(uniqueKeysWithValues: (deck ?? []).map { ($0.id, $0) }),
@@ -121,18 +182,32 @@ struct Library: View {
                     .modelContainer(readingContainer)
             }
         }
+        #if DEBUG
+        .sheet(isPresented: $showsDeveloperMenu) {
+            DeveloperMenu(deck: deck ?? [], stories: stories, readingContainer: readingContainer,
+                          startSimulation: startSimulation, onReadingChange: {
+                readingRevision += 1
+                if selection == .today { refreshDailyReading(at: clock.now, calendar: clock.calendar) }
+            }, onProgressReset: {
+                goalCelebration = nil
+                pendingGoalDay = nil
+                clearReading()
+                readingRevision += 1
+            })
+        }
+        #endif
         .task(id: readingRefreshDay) {
             guard readingRefreshDay != nil, !Task.isCancelled else { return }
-            refreshDailyReading(at: .now, calendar: .current)
+            refreshDailyReading(at: clock.now, calendar: clock.calendar)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
-            if phase == .active { now = .now }
+            if phase == .active { refreshClock() }
         }
         .onChange(of: selection) { _, tab in
-            now = .now
+            refreshClock()
             if tab != .today { goalCelebration = nil }
         }
-        .onChange(of: events.first?.attemptID) { _, _ in now = .now }
+        .onChange(of: events.first?.attemptID) { _, _ in refreshClock() }
         .onChange(of: dailyProgress) { previous, current in
             guard presentedStudyMode == .scheduled, current.reachedGoal(since: previous),
                   lastCelebratedLearningDay != day.key else { return }
@@ -155,21 +230,45 @@ struct Library: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-            now = .now
+            refreshClock()
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
-            now = .now
+            refreshClock()
         }
         .task(id: [now, wake]) {
             guard let wake else { return }
             do {
-                try await Task.sleep(for: .seconds(max(0, wake.timeIntervalSinceNow)))
+                try await Task.sleep(for: .seconds(max(0, wake.timeIntervalSince(clock.systemNow))))
                 try Task.checkCancellation()
-                now = .now
+                refreshClock()
             } catch {
                 // The activity, clock, or nearest review changed.
             }
         }
+    }
+
+    private struct ReadingRefresh: Equatable {
+        let day: ReadingDay
+        let revision: Int
+    }
+
+    private var settings: some View {
+        #if DEBUG
+        SettingsView(states: states, events: events, readingContainer: readingContainer,
+                     onReadingReset: clearReading, openDeveloperMenu: { showsDeveloperMenu = true })
+        #else
+        SettingsView(states: states, events: events, readingContainer: readingContainer, onReadingReset: clearReading)
+        #endif
+    }
+
+    private func clearReading() {
+        readingRecords = [:]
+        dailyReading = nil
+        readingPositions = [:]
+    }
+
+    private func refreshClock() {
+        refreshedAt = clock.systemNow
     }
 
     private func tabLabel(_ title: String, destination: Destination, icon: String, selectedIcon: String) -> some View {
@@ -181,7 +280,7 @@ struct Library: View {
         }
     }
 
-    private func makePlanner(at date: Date, recalls: [Recall], calendar: Calendar = .current) -> StudyPlanner {
+    private func makePlanner(at date: Date, recalls: [Recall], calendar: Calendar) -> StudyPlanner {
         StudyPlanner(cards: cards, progress: stateByID.mapValues(\.progress), goal: goal,
                      at: date, calendar: calendar, recalls: recalls)
     }
@@ -190,7 +289,19 @@ struct Library: View {
                        dailyProgress: DailyLearningProgress) -> some View {
         let next = todayMessage(for: planner)
         return Page(avoidsFloatingTabBar: true, density: .compact) {
-            TodayHeader(date: date)
+            TodayHeader(date: date, timeZone: clock.calendar.timeZone)
+            #if DEBUG
+            if let simulation = clock.simulation {
+                Button {
+                    showsDeveloperMenu = true
+                } label: {
+                    Label("SIMULATION · DAY \(simulation.learningDay)", systemImage: "clock.badge")
+                        .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("simulation-indicator")
+            }
+            #endif
 
             TodayWelcomeCard(title: next.title, detail: next.detail, button: next.button,
                              completed: planner.reachedGoalToday, start: startNextAction)
@@ -222,15 +333,11 @@ struct Library: View {
         do {
             let records = try ReadingStore.records(in: context)
             readingRecords = records
-            let storyID = try ReadingStore.dailyStoryID(at: date, calendar: calendar,
-                                                       availableIDs: Set(stories.map(\.id)), in: context) { previousID in
-                let recalls = events.compactMap(\.recall)
-                let planner = makePlanner(at: date, recalls: recalls, calendar: calendar)
-                return ReadingRecommendationEngine.recommend(
-                    stories: stories, statuses: planner.status, progress: stateByID.mapValues(\.progress),
-                    recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID
-                )?.storyID
-            }
+            let recalls = events.compactMap(\.recall)
+            let planner = makePlanner(at: date, recalls: recalls, calendar: calendar)
+            let storyID = try ReadingStore.dailyStoryID(stories: stories, planner: planner,
+                                                       progress: stateByID.mapValues(\.progress), recalls: recalls,
+                                                       records: records, at: date, calendar: calendar, in: context)
             dailyReading = (day, storyID)
         } catch {
             if dailyReading?.day != day { dailyReading = (day, nil) }
@@ -356,7 +463,7 @@ struct Library: View {
     }
 
     private func startNextAction() {
-        let planner = makePlanner(at: .now, recalls: events.compactMap(\.recall))
+        let planner = makePlanner(at: clock.now, recalls: events.compactMap(\.recall), calendar: clock.calendar)
         if planner.reachedGoalToday {
             if let plan = planner.completionPlan(shufflePractice: true) { open(plan) }
         } else if let plan = planner.dailyPlan {
@@ -573,7 +680,14 @@ struct Library: View {
                     Text(event.word).font(.system(.headline, design: .serif))
                         .environment(\.layoutDirection, .leftToRight)
                     Spacer()
-                    Text(event.date, format: .relative(presentation: .named)).font(PersianFont.subheadline)
+                    Group {
+                        if clock.isSimulating {
+                            Text(clock.relativeDate(event.date, to: now, locale: locale))
+                        } else {
+                            Text(event.date, format: .relative(presentation: .named))
+                        }
+                    }
+                    .font(PersianFont.subheadline)
                 }
                 .modifier(Panel())
             }

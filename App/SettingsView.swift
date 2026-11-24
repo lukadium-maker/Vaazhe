@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+#if DEBUG
+import UIKit
+#endif
 
 struct SettingsView: View {
     let states: [ReviewState]
@@ -7,14 +10,20 @@ struct SettingsView: View {
     let readingContainer: ModelContainer?
     let onReadingReset: () -> Void
     @Environment(\.modelContext) private var context
+    @Environment(AppClock.self) private var clock
     @AppStorage("dailyGoal") private var goal = DailyGoal.defaultValue
-    @AppStorage(TapCue.preferenceKey) private var tapSounds = TapCue.enabledByDefault
-    @AppStorage("voice") private var voice = EnglishAccent.american.rawValue
-    @AppStorage("slowPronunciation") private var slowPronunciation = false
-    @AppStorage("appearance") private var appearance = "system"
-    @AppStorage("reminder") private var reminder = false
-    @AppStorage("reminderHour") private var hour = 19
-    @AppStorage("reminderMinute") private var minute = 0
+    @AppStorage(TapCue.preferenceKey, store: .standard) private var tapSounds = TapCue.enabledByDefault
+    @AppStorage("voice", store: .standard) private var voice = EnglishAccent.american.rawValue
+    @AppStorage("slowPronunciation", store: .standard) private var slowPronunciation = false
+    @AppStorage("appearance", store: .standard) private var appearance = "system"
+    @AppStorage("reminder", store: .standard) private var reminder = false
+    @AppStorage("reminderHour", store: .standard) private var hour = 19
+    @AppStorage("reminderMinute", store: .standard) private var minute = 0
+    #if DEBUG
+    var openDeveloperMenu: (() -> Void)?
+    @State private var mascotTaps = 0
+    @State private var lastMascotTap: TimeInterval?
+    #endif
     @State private var updating = false
     @State private var confirming = false
     @State private var message: String?
@@ -22,6 +31,25 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                #if DEBUG
+                Section {
+                    ElphyMascotView(mood: .encouraging, size: 64)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            let time = ProcessInfo.processInfo.systemUptime
+                            if let lastMascotTap, time - lastMascotTap > 1.5 { mascotTaps = 0 }
+                            lastMascotTap = time
+                            mascotTaps += 1
+                            guard mascotTaps == 7 else { return }
+                            mascotTaps = 0
+                            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                            openDeveloperMenu?()
+                        }
+                        .accessibilityIdentifier("settings-mascot")
+                }
+                .listRowBackground(Palette.card)
+                #endif
                 Section("تمرین") {
                     Picker("هدف روزانه", selection: $goal) {
                         ForEach(DailyGoal.choices(including: goal), id: \.self) { count in
@@ -60,10 +88,12 @@ struct SettingsView: View {
                             .disabled(updating)
                     }
                 }
+                .disabled(clock.isSimulating)
                 Section("داده‌ها") {
                     Button("پاک کردن پیشرفت", role: .destructive) { confirming = true }
                 }
                 .listRowBackground(Palette.card)
+                .disabled(clock.isSimulating)
             }
             .scrollContentBackground(.hidden)
             .background(Palette.paper)
@@ -85,7 +115,7 @@ struct SettingsView: View {
 
     private var reminderTime: Binding<Date> {
         Binding {
-            Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: .now) ?? .now
+            Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: clock.systemNow) ?? clock.systemNow
         } set: { date in
             let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
             updateReminder(true, hour: parts.hour ?? 19, minute: parts.minute ?? 0)

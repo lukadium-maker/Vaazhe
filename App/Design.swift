@@ -325,8 +325,8 @@ struct Heading: View {
 struct CardContent: View {
     let card: Card
     let revealed: Bool
-    @AppStorage("voice") private var voice = EnglishAccent.american.rawValue
-    @AppStorage("slowPronunciation") private var slowPronunciation = false
+    @AppStorage("voice", store: .standard) private var voice = EnglishAccent.american.rawValue
+    @AppStorage("slowPronunciation", store: .standard) private var slowPronunciation = false
     @State private var playbackError: PronunciationService.PlaybackError?
 
     private var preferredAccent: EnglishAccent { .preferred(voice) }
