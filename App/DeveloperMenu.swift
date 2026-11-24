@@ -38,8 +38,8 @@ struct DeveloperMenu: View {
             switch self {
             case .start: "Choose the initial progress for your isolated simulation profile."
             case .fresh: "This replaces the current simulated profile with an empty one."
-            case .day: "Restore progress to before this day’s first simulated learning action. The daily story assignment is kept."
-            case .all: "Remove all simulated reviews, reading progress and daily assignments. Personal vocabulary is kept."
+            case .day: "Restore progress to before this day’s first simulated learning action. The daily story assignment is kept. Playground rounds played on this day are removed."
+            case .all: "Remove all simulated reviews, reading progress, daily assignments and Playground results. Personal vocabulary is kept."
             case .exit: "Your simulated profile will be discarded and your real learning progress will reopen."
             }
         }
@@ -69,6 +69,7 @@ struct DeveloperMenu: View {
                     timeControls(simulation)
                     learningControls(simulation, diagnostics: diagnostics)
                     diagnosticRows(simulation, diagnostics: diagnostics)
+                    playgroundDiagnostics(simulation)
                     dataControls
                 } else {
                     Section("Time Simulation") {
@@ -157,7 +158,7 @@ struct DeveloperMenu: View {
 
     private func learningControls(_ simulation: DeveloperSimulation, diagnostics: Diagnostics) -> some View {
         Section("Learning Simulation") {
-            Button("Complete Today’s Vocabulary") {
+            Button("Complete Recommended Session") {
                 perform {
                     guard let plan = diagnostics.planner.dailyPlan else { return }
                     var session = StudySession(plan: plan)
@@ -171,6 +172,10 @@ struct DeveloperMenu: View {
                 }
             }
             .disabled(diagnostics.planner.dailyPlan == nil)
+            Button("Simulate Successful Recall") { simulateRecall(.good, planner: diagnostics.planner) }
+                .disabled(diagnostics.planner.dueCards.isEmpty)
+            Button("Simulate Unsuccessful Recall") { simulateRecall(.again, planner: diagnostics.planner) }
+                .disabled(diagnostics.planner.dueCards.isEmpty)
             Button("Complete Today’s Reading") {
                 perform {
                     guard let selectedStory, assignmentDay == simulation.day else { return }
@@ -197,6 +202,13 @@ struct DeveloperMenu: View {
         }
     }
 
+    private func simulateRecall(_ rating: Rating, planner: StudyPlanner) {
+        perform {
+            guard let card = planner.dueCards.first else { return }
+            try clock.record(card, rating: rating, attemptID: UUID(), in: context)
+        }
+    }
+
     private func diagnosticRows(_ simulation: DeveloperSimulation, diagnostics: Diagnostics) -> some View {
         Section("Diagnostics") {
             LabeledContent("Effective date", value: timestamp(simulation.date))
@@ -205,6 +217,10 @@ struct DeveloperMenu: View {
             LabeledContent("Learned words", value: String(diagnostics.planner.introducedCount))
             LabeledContent("Due for review", value: String(diagnostics.planner.dueCards.count))
             let upcoming = diagnostics.queue.filter { $0.due > simulation.date }
+            LabeledContent("Recommended reviews", value: String(diagnostics.planner.recommendedReviews.count))
+            LabeledContent("Additional due reviews", value: String(diagnostics.planner.additionalDueCount))
+            LabeledContent("Recommended new words", value: String(diagnostics.planner.newCards.count))
+            LabeledContent("Recovery mode", value: diagnostics.planner.isRecoveryDay ? "On" : "Off")
             LabeledContent("Upcoming reviews", value: String(upcoming.count))
             LabeledContent("Current streak", value: String(diagnostics.streak.current))
             LabeledContent("Longest streak", value: String(diagnostics.streak.longest))
@@ -215,6 +231,35 @@ struct DeveloperMenu: View {
                 LabeledContent(entry.word, value: timestamp(entry.due))
             }
         }
+    }
+
+    private func playgroundDiagnostics(_ simulation: DeveloperSimulation) -> some View {
+        let cards = deck + personal.map(\.card)
+        let progress = Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0.progress) })
+        let recalls = events.compactMap(\.recall)
+        let planner = StudyPlanner(cards: cards, progress: progress, goal: goal, at: simulation.date,
+                                   calendar: simulation.calendar, recalls: recalls)
+        let history = (try? PracticeStore.results(in: simulation.container.mainContext)) ?? []
+        let engine = PracticeEngine(cards: cards, progress: progress, difficult: Set(planner.difficultCards.map(\.id)),
+                                    history: history, date: simulation.date, calendar: simulation.calendar)
+        return Section("Vocabulary Playground") {
+            LabeledContent("Practice date", value: timestamp(simulation.date))
+            LabeledContent("Eligible words", value: String(engine.encountered.count))
+            Text(engine.encountered.map(\.word).sorted().joined(separator: ", ")).font(.footnote)
+            ForEach(PracticeGame.allCases) { game in
+                let round = sampleRound(engine, game: game)
+                let stats = PracticeStatistics(results: history.filter { $0.game == game && $0.date <= simulation.date })
+                LabeledContent(game.rawValue.capitalized, value: "\(round.count) generated · \(stats.results.count) rounds · \(stats.questions) answers")
+                if !round.isEmpty {
+                    Text("Weak-word sample: \(round.map { $0.card.word }.joined(separator: ", "))").font(.footnote)
+                }
+            }
+        }
+    }
+
+    private func sampleRound(_ engine: PracticeEngine, game: PracticeGame) -> [PracticeQuestion] {
+        var random = SystemRandomNumberGenerator()
+        return engine.round(for: game, mode: .weak, difficulty: .medium, using: &random)
     }
 
     private var dataControls: some View {
@@ -274,14 +319,13 @@ struct DeveloperMenu: View {
             progress[card.id].map { $0.introduced <= date && calendar.isDate($0.introduced, inSameDayAs: date) } == true
         }
         let words = (today + planner.newCards).map(\.word)
-        let attemptsToday = recalls.contains { $0.date <= date && calendar.isDate($0.date, inSameDayAs: date) }
         let readingDates = (try? clock.simulation?.readingCompletions()) ?? []
         let streak = LearningStreak(activity: events.map(\.date) + readingDates.map(\.date), at: date, calendar: calendar)
         let readingComplete = assignmentDay == clock.simulation?.day && completedReadingDates.contains {
             $0 <= date && calendar.isDate($0, inSameDayAs: date)
         }
         return Diagnostics(planner: planner, queue: queue, streak: streak, words: words,
-                           vocabularyComplete: planner.reachedGoalToday || (planner.effectiveGoal == 0 && attemptsToday && planner.dueCards.isEmpty),
+                           vocabularyComplete: planner.completedCoreToday,
                            readingComplete: readingComplete)
     }
 

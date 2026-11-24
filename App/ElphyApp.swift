@@ -7,6 +7,7 @@ import UIKit
     private let container: ModelContainer?
     private let deck: [Card]?
     private let readingContainer: ModelContainer?
+    private let practiceContainer: ModelContainer?
     private let stories: [ReadingStory]
     @State private var clock: AppClock
 
@@ -16,6 +17,7 @@ import UIKit
         self.deck = deck
         stories = deck.flatMap { try? ReadingContent.load(cards: $0) } ?? []
         readingContainer = try? ReadingStore.makeContainer()
+        practiceContainer = try? PracticeStore.makeContainer()
         let clock = AppClock()
         #if DEBUG
         do {
@@ -34,17 +36,17 @@ import UIKit
             Group {
                 #if DEBUG
                 if let simulation = clock.simulation {
-                    library(vocabulary: simulation.container, reading: simulation.container)
+                    library(vocabulary: simulation.container, reading: simulation.container, practice: simulation.container)
                         .defaultAppStorage(simulation.preferences)
                         .id(simulation.id)
                 } else if let container {
-                    library(vocabulary: container, reading: readingContainer)
+                    library(vocabulary: container, reading: readingContainer, practice: practiceContainer)
                 } else {
                     unavailable
                 }
                 #else
                 if let container {
-                    library(vocabulary: container, reading: readingContainer)
+                    library(vocabulary: container, reading: readingContainer, practice: practiceContainer)
                 } else {
                     unavailable
                 }
@@ -64,12 +66,12 @@ import UIKit
                                description: Text("برنامه را ببند و دوباره باز کن."))
     }
 
-    private func library(vocabulary: ModelContainer, reading: ModelContainer?) -> some View {
+    private func library(vocabulary: ModelContainer, reading: ModelContainer?, practice: ModelContainer?) -> some View {
         #if DEBUG
-        Library(deck: deck, stories: stories, readingContainer: reading, startSimulation: startSimulation)
+        Library(deck: deck, stories: stories, readingContainer: reading, practiceContainer: practice, startSimulation: startSimulation)
             .modelContainer(vocabulary)
         #else
-        Library(deck: deck, stories: stories, readingContainer: reading)
+        Library(deck: deck, stories: stories, readingContainer: reading, practiceContainer: practice)
             .modelContainer(vocabulary)
         #endif
     }
@@ -82,7 +84,8 @@ import UIKit
             source = (container.mainContext, readingContainer.mainContext)
         }
         clock.simulation = try DeveloperSimulation.start(at: clock.systemNow, calendar: .current,
-                                                          in: DeveloperSimulation.directory(), copying: source)
+                                                          in: DeveloperSimulation.directory(), copying: source,
+                                                          practice: copyProgress ? practiceContainer?.mainContext : nil)
         clock.simulationRecoveryError = nil
     }
     #endif
@@ -94,6 +97,7 @@ struct Library: View {
     let deck: [Card]?
     let stories: [ReadingStory]
     let readingContainer: ModelContainer?
+    let practiceContainer: ModelContainer?
     #if DEBUG
     let startSimulation: (Bool) throws -> Void
     @State private var showsDeveloperMenu = false
@@ -109,9 +113,10 @@ struct Library: View {
     @State private var presentedStudyMode: StudyPlan.Mode?
     @State private var quiz: QuizPresentation?
     @State private var reading: ReadingPresentation?
-    @State private var dailyReading: (day: ReadingDay, storyID: String?)?
+    @State private var dailyReading: (day: ReadingDay, storyID: String?, isRevision: Bool)?
     @State private var readingRecords: [String: ReadingRecord] = [:]
     @State private var showsPractice = false
+    @State private var showsPlayground = false
     @State private var welcomeVisible = false
     @State private var pendingGoalDay: String?
     @State private var goalCelebration: UUID?
@@ -133,7 +138,7 @@ struct Library: View {
         let recalls = events.compactMap(\.recall)
         let planner = makePlanner(at: now, recalls: recalls, calendar: calendar)
         let showsSchedule = selection == .today || selection == .progress
-        let wake = !clock.isSimulating && scenePhase == .active && showsSchedule
+        let wake = !clock.isSimulating && scenePhase == .active && (showsSchedule || reading != nil)
             ? ReviewClock.nextRefresh(at: now, nextDue: planner.nextDue, calendar: calendar) : nil
         let day = ReadingDay(at: now, calendar: calendar)
         #if DEBUG
@@ -141,43 +146,26 @@ struct Library: View {
         #else
         let readingTask = ReadingRefresh(day: day, revision: 0)
         #endif
-        let readingRefreshDay = scenePhase == .active && selection == .today && reading == nil ? readingTask : nil
+        let readingRefreshDay = scenePhase == .active && (selection == .today || reading != nil) ? readingTask : nil
         let dailyProgress = DailyLearningProgress(day: calendar.startOfDay(for: now),
                                                   count: planner.introducedToday, target: planner.effectiveGoal,
                                                   configuredGoal: goal)
         let canCelebrate = pendingGoalDay == day.key && planner.reachedGoalToday && selection == .today
             && scenePhase == .active && presentedStudyMode == nil && quiz == nil && reading == nil
 
-        TabView(selection: $selection) {
-            Tab(value: Destination.today) {
-                today(at: now, planner: planner, day: day, dailyProgress: dailyProgress)
-            } label: {
-                tabLabel("امروز", destination: .today, icon: "sun.max", selectedIcon: "sun.max.fill")
-            }
-            Tab(value: Destination.vocabulary) {
-                CollectionView(bundled: deck ?? [], personal: personal, states: index, statuses: planner.status)
-            } label: {
-                tabLabel("واژه‌ها", destination: .vocabulary, icon: "rectangle.on.rectangle", selectedIcon: "rectangle.on.rectangle.fill")
-            }
-            Tab(value: Destination.progress) {
-                progress(planner)
-            } label: {
-                tabLabel("پیشرفت", destination: .progress, icon: "chart.bar", selectedIcon: "chart.bar.fill")
-            }
-            Tab(value: Destination.settings) {
-                settings
-            } label: {
-                tabLabel("تنظیمات", destination: .settings, icon: "gearshape", selectedIcon: "gearshape.fill")
-            }
-        }
+        tabs(at: now, index: index, planner: planner, day: day, dailyProgress: dailyProgress)
+        .sheet(isPresented: $showsPlayground) { playground }
         .sheet(item: $session, onDismiss: { presentedStudyMode = nil }) { StudyView(plan: $0) }
         .sheet(item: $quiz) { QuizView(quiz: $0.session) }
-        .sheet(item: $reading, onDismiss: { refreshClock() }) { presentation in
+        .sheet(item: $reading, onDismiss: {
+            refreshClock()
+            refreshDailyReading(at: clock.now, calendar: clock.calendar)
+        }) { presentation in
             if let readingContainer {
                 ReadingLibrary(stories: stories,
                                cards: Dictionary(uniqueKeysWithValues: (deck ?? []).map { ($0.id, $0) }),
-                               statuses: planner.status, vocabularyProgress: index.mapValues(\.progress),
-                               recalls: recalls, now: now, initialStoryID: presentation.storyID,
+                               statuses: planner.status, dailyStoryID: dailyReading?.day == day ? dailyReading?.storyID : nil,
+                               isRevision: dailyReading?.isRevision == true, now: now, initialStoryID: presentation.storyID,
                                positions: $readingPositions)
                     .modelContainer(readingContainer)
             }
@@ -247,6 +235,43 @@ struct Library: View {
         }
     }
 
+    private func tabs(at date: Date, index: [String: ReviewState], planner: StudyPlanner,
+                      day: ReadingDay, dailyProgress: DailyLearningProgress) -> some View {
+        TabView(selection: $selection) {
+            Tab(value: Destination.today) {
+                today(at: date, planner: planner, day: day, dailyProgress: dailyProgress)
+            } label: {
+                tabLabel("امروز", destination: .today, icon: "sun.max", selectedIcon: "sun.max.fill")
+            }
+            Tab(value: Destination.vocabulary) {
+                CollectionView(bundled: deck ?? [], personal: personal, states: index, statuses: planner.status)
+            } label: {
+                tabLabel("واژه‌ها", destination: .vocabulary, icon: "rectangle.on.rectangle", selectedIcon: "rectangle.on.rectangle.fill")
+            }
+            Tab(value: Destination.progress) {
+                progress(planner)
+            } label: {
+                tabLabel("پیشرفت", destination: .progress, icon: "chart.bar", selectedIcon: "chart.bar.fill")
+            }
+            Tab(value: Destination.settings) {
+                settings
+            } label: {
+                tabLabel("تنظیمات", destination: .settings, icon: "gearshape", selectedIcon: "gearshape.fill")
+            }
+        }
+    }
+
+    @ViewBuilder private var playground: some View {
+        if let practiceContainer {
+            let planner = makePlanner(at: clock.now, recalls: events.compactMap(\.recall), calendar: clock.calendar)
+            PracticePlayground(cards: cards, progress: stateByID.mapValues(\.progress),
+                               difficult: Set(planner.difficultCards.map(\.id)), container: practiceContainer)
+        } else {
+            ContentUnavailableView("زمین بازی در دسترس نیست", systemImage: "externaldrive")
+                .presentationDragIndicator(.visible)
+        }
+    }
+
     private struct ReadingRefresh: Equatable {
         let day: ReadingDay
         let revision: Int
@@ -304,7 +329,7 @@ struct Library: View {
             #endif
 
             TodayWelcomeCard(title: next.title, detail: next.detail, button: next.button,
-                             completed: planner.reachedGoalToday, start: startNextAction)
+                             completed: planner.completedCoreToday, start: startNextAction)
                 .opacity(welcomeVisible || reduceMotion ? 1 : 0)
                 .offset(y: welcomeVisible || reduceMotion ? 0 : 8)
                 .onAppear {
@@ -313,7 +338,7 @@ struct Library: View {
                 }
             dailyPlanPanel(planner, progress: dailyProgress)
             readingPanel(for: day, planner: planner)
-            optionalPracticePanel(planner)
+            playgroundEntry(planner, afterDailyWork: planner.completedCoreToday || readingCompleted(on: day))
 
             if deck == nil {
                 Label("مجموعهٔ اصلی بارگیری نشد. واژه‌های شخصی در دسترس‌اند.", systemImage: "exclamationmark.circle")
@@ -335,12 +360,12 @@ struct Library: View {
             readingRecords = records
             let recalls = events.compactMap(\.recall)
             let planner = makePlanner(at: date, recalls: recalls, calendar: calendar)
-            let storyID = try ReadingStore.dailyStoryID(stories: stories, planner: planner,
+            let assignment = try ReadingStore.dailyAssignment(stories: stories, planner: planner,
                                                        progress: stateByID.mapValues(\.progress), recalls: recalls,
                                                        records: records, at: date, calendar: calendar, in: context)
-            dailyReading = (day, storyID)
+            dailyReading = (day, assignment?.storyID, assignment?.isRevision == true)
         } catch {
-            if dailyReading?.day != day { dailyReading = (day, nil) }
+            if dailyReading?.day != day { dailyReading = (day, nil, false) }
         }
     }
 
@@ -360,9 +385,8 @@ struct Library: View {
             ReadingRecommendationCard(story: story, matchingVocabularyCount: count,
                                       record: readingRecords[story.id],
                                       hasReadingPosition: (readingPositions[story.id] ?? 0) > 0,
-                                      libraryCompleted: !stories.isEmpty && stories.allSatisfy {
-                                          readingRecords[$0.id]?.completed == true
-                                      },
+                                      isRevision: dailyReading.isRevision,
+                                      completedToday: readingCompleted(on: day),
                                       start: { openReading(storyID: story.id) }, showLibrary: { openReading() })
         } else if readingContainer != nil, !stories.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
@@ -388,7 +412,7 @@ struct Library: View {
     }
 
     private func dailyPlanPanel(_ planner: StudyPlanner, progress: DailyLearningProgress) -> some View {
-        let due = planner.dueCards.count
+        let due = planner.recommendedReviews.count
         return VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: DashboardMetrics.inline) {
@@ -411,10 +435,14 @@ struct Library: View {
             }
             Divider().overlay(Palette.border).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
-                Label(due > 0 ? "\(fa(due)) واژه آمادهٔ مرور" : "فعلاً واژه‌ای برای مرور نداری",
+                Label(due > 0 ? "\(fa(due)) واژه در مرور پیشنهادی" : "مرور پیشنهادی دیگری نداری",
                       systemImage: due > 0 ? "arrow.clockwise" : "checkmark.circle")
                     .font(due > 0 ? DashboardFont.action : DashboardFont.body)
                     .foregroundStyle(due > 0 ? Palette.sage : Palette.muted)
+                if planner.additionalDueCount > 0 {
+                    Text("\(fa(planner.additionalDueCount)) واژهٔ دیگر آمادهٔ مرور اختیاری")
+                        .font(DashboardFont.metadata).foregroundStyle(Palette.muted)
+                }
                 if planner.scheduledLaterToday > 0 {
                     Text("\(fa(planner.scheduledLaterToday)) واژه برای مرور در ادامهٔ امروز")
                         .font(DashboardFont.metadata)
@@ -431,50 +459,45 @@ struct Library: View {
 
     private func todayMessage(for planner: StudyPlanner)
         -> (title: String, detail: String, button: String?) {
-        let new = fa(planner.newCards.count)
-        let due = fa(planner.dueCards.count)
-        switch TodayLearningState(planner: planner) {
-        case .goalComplete(let action):
-            let button: String?
-            switch action {
-            case .scheduled: button = "مرور واژه‌ها"
-            case .practice: button = "تمرین بیشتر"
-            default: button = nil
-            }
-            return ("آفرین! هدف امروز کامل شد", "\(fa(planner.introducedToday)) واژهٔ جدید یاد گرفتی.", button)
-        case .next(.learn):
-            return ("آماده‌ای شروع کنیم؟", "امروز \(new) واژهٔ تازه منتظرته.", "شروع یادگیری")
-        case .next(.review):
-            return ("وقت مرور واژه‌هاست", "\(due) واژه برای مرور آماده است.", "مرور واژه‌ها")
-        case .next(.mixed):
-            return ("آماده‌ای شروع کنیم؟", "\(due) واژه برای مرور و \(new) واژهٔ تازه داری.", "شروع یادگیری")
-        case .next(.continueStudy):
-            return ("عالی پیش می‌ری!", "برای هدف امروز \(new) واژهٔ تازه مونده.", "ادامهٔ یادگیری")
-        case .next(.practice):
-            return ("برای امروز آماده‌ای", "فعلاً مروری آماده نیست. هر وقت خواستی، واژه‌های آشنا را تمرین کن.",
-                    "تمرین بیشتر")
-        case .next(.setGoal):
-            return ("آماده‌ای شروع کنیم؟", "برای شروع، تعداد واژه‌های تازهٔ روزانه را انتخاب کن.",
-                    "انتخاب هدف روزانه")
-        case .next(.browse):
-            return ("مجموعه‌ات را بساز", "یک واژه با معنی فارسی اضافه کن تا تمرین را شروع کنی.",
-                    "رفتن به واژه‌ها")
+        if planner.dailyPlan != nil {
+            let counts = "\(fa(planner.newCards.count)) واژهٔ جدید · \(fa(planner.recommendedReviews.count)) مرور · حدود \(fa(planner.estimatedMinutes)) دقیقه"
+            return (planner.isRecoveryDay ? "امروز بیشتر روی مرور تمرکز می‌کنیم" : "آماده‌ای شروع کنیم؟",
+                    counts, planner.introducedToday > 0 || planner.reviewedToday > 0 ? "ادامهٔ یادگیری" : "شروع یادگیری")
+        }
+        if planner.completedCoreToday {
+            return ("آفرین! تمرین پیشنهادی امروز کامل شد",
+                    "اگر دوست داری، می‌تونی به مرور یا بازی با واژه‌ها ادامه بدی.",
+                    planner.dueCards.isEmpty ? "بریم بازی کنیم" : "مرور بیشتر")
+        }
+        if planner.remainingNew == 0 && planner.introducedCount > 0 {
+            return ("همهٔ واژه‌های موجود را یاد گرفتی!",
+                    "حالا می‌تونی دانسته‌هات رو با مرور و بازی محکم‌تر کنی.",
+                    planner.dueCards.isEmpty ? "بریم بازی کنیم" : "مرور بیشتر")
+        }
+        if !planner.dueCards.isEmpty {
+            return ("واژه‌هایی برای مرور آماده‌اند", "هر وقت خواستی، با یک دور کوتاه شروع کن.", "مرور بیشتر")
+        }
+        switch planner.nextAction {
+        case .setGoal:
+            return ("آماده‌ای شروع کنیم؟", "تعداد واژه‌های تازهٔ روزانه را انتخاب کن.", "انتخاب هدف روزانه")
+        case .browse:
+            return ("مجموعه‌ات را بساز", "یک واژه با معنی فارسی اضافه کن تا تمرین را شروع کنی.", "رفتن به واژه‌ها")
+        default:
+            return ("برای امروز آماده‌ای", "هر وقت خواستی، واژه‌های آشنا را تمرین کن.", "بریم بازی کنیم")
         }
     }
 
     private func startNextAction() {
         let planner = makePlanner(at: clock.now, recalls: events.compactMap(\.recall), calendar: clock.calendar)
-        if planner.reachedGoalToday {
-            if let plan = planner.completionPlan(shufflePractice: true) { open(plan) }
-        } else if let plan = planner.dailyPlan {
+        if let plan = planner.dailyPlan {
+            open(plan)
+        } else if !planner.dueCards.isEmpty, let plan = planner.completionPlan() {
             open(plan)
         } else {
             switch planner.nextAction {
-            case .practice:
-                if let plan = planner.morePracticePlan(shuffle: true) { open(plan) }
             case .setGoal: selection = .settings
             case .browse: selection = .vocabulary
-            default: break
+            default: showsPlayground = true
             }
         }
     }
@@ -490,24 +513,37 @@ struct Library: View {
         let session: QuizSession
     }
 
+    private func readingCompleted(on day: ReadingDay) -> Bool {
+        guard dailyReading?.day == day, let storyID = dailyReading?.storyID,
+              let completion = readingRecords[storyID]?.lastCompletion else { return false }
+        return ReadingDay(at: completion, calendar: clock.calendar) == day
+    }
+
+    private func playgroundEntry(_ planner: StudyPlanner, afterDailyWork: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(afterDailyWork ? "هنوز انرژی داری؟" : "زمین بازی واژه‌ها", systemImage: "puzzlepiece")
+                .font(DashboardFont.section).accessibilityAddTraits(.isHeader)
+            Text("با چند بازی کوتاه، واژه‌هایی که یاد گرفتی رو بهتر به خاطر بسپار.")
+                .font(DashboardFont.body).foregroundStyle(Palette.muted)
+            Button("بریم بازی کنیم") { showsPlayground = true }
+                .buttonStyle(PrimaryButton())
+                .accessibilityIdentifier("playground.open")
+            optionalPracticePanel(planner)
+        }
+        .modifier(Panel(fill: Palette.tint, padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
+    }
+
     private func optionalPracticePanel(_ planner: StudyPlanner) -> some View {
         DisclosureGroup(isExpanded: $showsPractice) {
             if showsPractice { practiceActivities(planner) }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
-                Text("تمرین اختیاری").font(DashboardFont.section).accessibilityAddTraits(.isHeader)
-                if !showsPractice {
-                    Text(planner.practicedCards.isEmpty ? "آزمون و مرور آزاد پس از اولین تمرین باز می‌شوند."
-                         : "آزمون، مرور آزاد و واژه‌های دشوار")
-                        .font(DashboardFont.metadata)
-                        .foregroundStyle(Palette.muted)
-                }
+                Text("مرور و آزمون‌های بیشتر").font(DashboardFont.action)
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .contentShape(Rectangle())
             .accessibilityElement(children: .combine)
         }
-        .modifier(Panel(padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
     }
 
     private func practiceActivities(_ planner: StudyPlanner) -> some View {
@@ -595,16 +631,7 @@ struct Library: View {
     }
 
     private var dailyGoalPicker: some View {
-        Picker("هدف روزانه", selection: $goal) {
-            ForEach(DailyGoal.choices(including: goal), id: \.self) { count in
-                Text(count == 0 ? "فقط مرور" : "\(fa(count)) واژهٔ جدید").tag(count)
-            }
-        }
-        .pickerStyle(.menu)
-        .labelsHidden()
-        .font(DashboardFont.action)
-        .frame(minHeight: 44)
-        .accessibilityLabel("هدف روزانه")
+        DailyGoalSelector(goal: $goal)
     }
 
     private func masteryPanel(_ mastery: MasteryBreakdown) -> some View {

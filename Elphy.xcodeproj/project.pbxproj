@@ -35,6 +35,12 @@
 		000000000000000000000463 /* DeveloperSimulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000462 /* DeveloperSimulation.swift */; };
 		000000000000000000000465 /* DeveloperMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000464 /* DeveloperMenu.swift */; };
 		000000000000000000000469 /* DeveloperSimulationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000468 /* DeveloperSimulationTests.swift */; };
+		000000000000000000000901 /* PracticeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000900 /* PracticeEngine.swift */; };
+		000000000000000000000903 /* PracticeCloze.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000902 /* PracticeCloze.swift */; };
+		000000000000000000000905 /* PracticeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000904 /* PracticeStore.swift */; };
+		000000000000000000000907 /* PracticePlayground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000906 /* PracticePlayground.swift */; };
+		000000000000000000000969 /* PracticeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000968 /* PracticeTests.swift */; };
+		00000000000000000000096B /* LongTermLearningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000096A /* LongTermLearningTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,13 +78,19 @@
 		000000000000000000000220 /* Reading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reading.swift; sourceTree = "<group>"; };
 		000000000000000000000222 /* ReadingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStorage.swift; sourceTree = "<group>"; };
 		000000000000000000000224 /* ReadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingView.swift; sourceTree = "<group>"; };
-		000000000000000000000226 /* elfy-reading-stories-20.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = elfy-reading-stories-20.json; sourceTree = "<group>"; };
+		000000000000000000000226 /* elfy-reading-stories-20.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "elfy-reading-stories-20.json"; sourceTree = "<group>"; };
 		000000000000000000000228 /* ReadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTests.swift; sourceTree = "<group>"; };
 		00000000000000000000022A /* TodayDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDashboard.swift; sourceTree = "<group>"; };
 		000000000000000000000460 /* AppClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppClock.swift; sourceTree = "<group>"; };
 		000000000000000000000462 /* DeveloperSimulation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperSimulation.swift; sourceTree = "<group>"; };
 		000000000000000000000464 /* DeveloperMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperMenu.swift; sourceTree = "<group>"; };
 		000000000000000000000468 /* DeveloperSimulationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperSimulationTests.swift; sourceTree = "<group>"; };
+		000000000000000000000900 /* PracticeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeEngine.swift; sourceTree = "<group>"; };
+		000000000000000000000902 /* PracticeCloze.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeCloze.swift; sourceTree = "<group>"; };
+		000000000000000000000904 /* PracticeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeStore.swift; sourceTree = "<group>"; };
+		000000000000000000000906 /* PracticePlayground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticePlayground.swift; sourceTree = "<group>"; };
+		000000000000000000000968 /* PracticeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeTests.swift; sourceTree = "<group>"; };
+		00000000000000000000096A /* LongTermLearningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LongTermLearningTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -96,6 +108,10 @@
 				000000000000000000000460 /* AppClock.swift */,
 				000000000000000000000462 /* DeveloperSimulation.swift */,
 				000000000000000000000464 /* DeveloperMenu.swift */,
+				000000000000000000000900 /* PracticeEngine.swift */,
+				000000000000000000000902 /* PracticeCloze.swift */,
+				000000000000000000000904 /* PracticeStore.swift */,
+				000000000000000000000906 /* PracticePlayground.swift */,
 				000000000000000000000007 /* ElphyApp.swift */,
 				000000000000000000000008 /* Vocabulary.swift */,
 				000000000000000000000103 /* Lalezar-Regular.ttf */,
@@ -120,6 +136,8 @@
 			children = (
 				000000000000000000000228 /* ReadingTests.swift */,
 				000000000000000000000468 /* DeveloperSimulationTests.swift */,
+				000000000000000000000968 /* PracticeTests.swift */,
+				00000000000000000000096A /* LongTermLearningTests.swift */,
 				00000000000000000000001B /* ElphyTests.swift */,
 			);
 			path = Tests;
@@ -250,6 +268,10 @@
 				000000000000000000000461 /* AppClock.swift in Sources */,
 				000000000000000000000463 /* DeveloperSimulation.swift in Sources */,
 				000000000000000000000465 /* DeveloperMenu.swift in Sources */,
+				000000000000000000000901 /* PracticeEngine.swift in Sources */,
+				000000000000000000000903 /* PracticeCloze.swift in Sources */,
+				000000000000000000000905 /* PracticeStore.swift in Sources */,
+				000000000000000000000907 /* PracticePlayground.swift in Sources */,
 				000000000000000000000012 /* ElphyApp.swift in Sources */,
 				000000000000000000000221 /* Reading.swift in Sources */,
 				000000000000000000000223 /* ReadingStorage.swift in Sources */,
@@ -264,6 +286,8 @@
 			files = (
 				000000000000000000000229 /* ReadingTests.swift in Sources */,
 				000000000000000000000469 /* DeveloperSimulationTests.swift in Sources */,
+				000000000000000000000969 /* PracticeTests.swift */,
+				00000000000000000000096B /* LongTermLearningTests.swift */,
 				00000000000000000000001E /* ElphyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -282,13 +306,13 @@
 		000000000000000000000017 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7Q55U687F6;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Elphy;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -304,12 +328,12 @@
 		000000000000000000000018 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7Q55U687F6;
 				GENERATE_INFOPLIST_FILE = YES;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Elphy;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

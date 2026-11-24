@@ -9,8 +9,8 @@ struct ReadingLibrary: View {
     let stories: [ReadingStory]
     let cards: [String: Card]
     let statuses: [String: VocabularyStatus]
-    let vocabularyProgress: [String: StudyPlanner.Progress]
-    let recalls: [Recall]
+    let dailyStoryID: String?
+    let isRevision: Bool
     let now: Date
     @Binding private var positions: [String: Double]
 
@@ -22,13 +22,13 @@ struct ReadingLibrary: View {
     @Environment(AppClock.self) private var clock
 
     init(stories: [ReadingStory], cards: [String: Card], statuses: [String: VocabularyStatus],
-         vocabularyProgress: [String: StudyPlanner.Progress], recalls: [Recall], now: Date,
+         dailyStoryID: String?, isRevision: Bool, now: Date,
          initialStoryID: String?, positions: Binding<[String: Double]>) {
         self.stories = stories
         self.cards = cards
         self.statuses = statuses
-        self.vocabularyProgress = vocabularyProgress
-        self.recalls = recalls
+        self.dailyStoryID = dailyStoryID
+        self.isRevision = isRevision
         self.now = now
         _positions = positions
         _path = State(initialValue: initialStoryID.map { [.passage($0)] } ?? [])
@@ -42,15 +42,17 @@ struct ReadingLibrary: View {
         let records = records
         NavigationStack(path: $path) {
             Page {
-                if let recommendation = ReadingRecommendationEngine.recommend(
-                    stories: stories, statuses: statuses, progress: vocabularyProgress,
-                    recalls: recalls, records: records, at: now, calendar: clock.calendar
-                ), let featured = stories.first(where: { $0.id == recommendation.storyID }) {
+                if let featured = stories.first(where: { $0.id == dailyStoryID }) {
+                    let completion = records[featured.id]?.lastCompletion
                     ReadingRecommendationCard(story: featured,
-                                              matchingVocabularyCount: recommendation.matchingVocabularyIDs.count,
+                                              matchingVocabularyCount: featured.targetWordIds.filter {
+                                                  statuses[$0].map { $0.stage != .new } == true
+                                              }.count,
                                               record: records[featured.id],
                                               hasReadingPosition: (positions[featured.id] ?? 0) > 0,
-                                              libraryExplanation: recommendation.explanation,
+                                              isRevision: isRevision,
+                                              completedToday: completion.map { clock.calendar.isDate($0, inSameDayAs: now) } == true,
+                                              inLibrary: true,
                                               start: { path.append(.passage(featured.id)) })
                 }
 
@@ -138,14 +140,14 @@ struct ReadingRecommendationCard: View {
     let matchingVocabularyCount: Int
     let record: ReadingRecord?
     var hasReadingPosition = false
-    var libraryCompleted = false
-    var libraryExplanation: String?
+    var isRevision = false
+    var completedToday = false
+    var inLibrary = false
     let start: () -> Void
     var showLibrary: (() -> Void)?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var inLibrary: Bool { libraryExplanation != nil }
-    private var completed: Bool { record?.completed == true }
+    private var completed: Bool { completedToday }
     private var hasCover: Bool { ReadingCover.assetName(for: story.id) != nil }
 
     var body: some View {
@@ -169,8 +171,12 @@ struct ReadingRecommendationCard: View {
                     completionBadge
                 }
             }
-            if libraryCompleted {
-                Text("آفرین! همهٔ داستان‌ها را خوانده‌ای.")
+            if completed && !isRevision {
+                Text("فردا با یک داستان تازه برمی‌گردیم.")
+                    .font(DashboardFont.metadata).foregroundStyle(Palette.muted)
+            }
+            if isRevision {
+                Text("همهٔ داستان‌ها را خوانده‌ای. این داستان را برای مرور واژه‌ها پیشنهاد می‌کنیم.")
                     .font(DashboardFont.metadata)
                     .foregroundStyle(Palette.sage)
             }
@@ -189,19 +195,28 @@ struct ReadingRecommendationCard: View {
             }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: DashboardMetrics.group) {
-                    Button(actionTitle, action: start)
-                        .buttonStyle(PrimaryButton(compact: true))
+                    dailyReadButton
                         .fixedSize(horizontal: true, vertical: false)
                     Spacer(minLength: 0)
                     libraryButton(showLibrary).fixedSize(horizontal: true, vertical: false)
                 }
                 VStack(alignment: .leading, spacing: 0) {
-                    Button(actionTitle, action: start).buttonStyle(PrimaryButton(compact: true))
+                    dailyReadButton
                     libraryButton(showLibrary)
                 }
             }
         }
         .modifier(Panel(padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
+    }
+
+    @ViewBuilder private var dailyReadButton: some View {
+        if completed {
+            Button(actionTitle, action: start)
+                .buttonStyle(.bordered)
+                .frame(minHeight: 44)
+        } else {
+            Button(actionTitle, action: start).buttonStyle(PrimaryButton(compact: true))
+        }
     }
 
     private var todayStoryDetails: some View {
@@ -268,18 +283,21 @@ struct ReadingRecommendationCard: View {
                 HStack(spacing: 10) { metadata }.fixedSize(horizontal: true, vertical: false)
                 VStack(alignment: .leading, spacing: 4) { metadata }
             }
-            if matchingVocabularyCount == 0, let libraryExplanation {
-                Text(libraryExplanation).font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+            if isRevision {
+                Text("همهٔ داستان‌ها را خوانده‌ای. این داستان برای مرور واژه‌هاست.")
+                    .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
             }
-            Button(actionTitle, action: start).buttonStyle(PrimaryButton())
+            Button(actionTitle, action: start)
+                .buttonStyle(.plain)
+                .foregroundStyle(Palette.sage)
+                .frame(minHeight: 44)
         }
         .modifier(Panel(padding: 16))
     }
 
     private var heading: some View {
         HStack(spacing: 6) {
-            Text(inLibrary ? (matchingVocabularyCount == 0 ? "پیشنهاد برای شروع" : "پیشنهاد برای تو")
-                 : "داستان پیشنهادی امروز")
+            Text(isRevision ? "مرور داستان" : "داستان پیشنهادی امروز")
                 .font(inLibrary ? HeadingFont.section : DashboardFont.section)
                 .accessibilityAddTraits(.isHeader)
             if inLibrary && hasCover {
@@ -290,19 +308,21 @@ struct ReadingRecommendationCard: View {
 
     @ViewBuilder private var completionBadge: some View {
         if completed {
-            Label("تکمیل‌شده", systemImage: "checkmark.circle")
+            Label("آفرین! داستان امروز تکمیل شد.", systemImage: "checkmark.circle")
                 .font(inLibrary ? PersianFont.subheadlineEmphasis : DashboardFont.metadata)
                 .foregroundStyle(Palette.sage)
         }
     }
 
     private var actionTitle: String {
-        ReadingCardAction(record: record, hasReadingPosition: hasReadingPosition).title
+        if completed { return "مطالعه دوباره" }
+        if isRevision { return "مرور داستان" }
+        return ReadingCardAction(record: record, hasReadingPosition: hasReadingPosition).title
     }
 
     private func libraryButton(_ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text("همهٔ داستان‌ها")
+            Text(completed ? "کشف داستان‌های بیشتر" : "همهٔ داستان‌ها")
                 .font(DashboardFont.action)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
