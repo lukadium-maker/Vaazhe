@@ -61,7 +61,6 @@ struct Library: View {
     @State private var goalCelebration: UUID?
     @State private var readingPositions: [String: Double] = [:]
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var now = Date.now
 
@@ -85,21 +84,29 @@ struct Library: View {
             && scenePhase == .active && presentedStudyMode == nil && quiz == nil && reading == nil
 
         TabView(selection: $selection) {
-            Tab("امروز", systemImage: "sun.max", value: Destination.today) {
+            Tab(value: Destination.today) {
                 today(at: now, planner: planner, day: day, dailyProgress: dailyProgress)
+            } label: {
+                tabLabel("امروز", destination: .today, icon: "sun.max", selectedIcon: "sun.max.fill")
             }
-            Tab("واژه‌ها", systemImage: "rectangle.on.rectangle", value: Destination.vocabulary) {
+            Tab(value: Destination.vocabulary) {
                 CollectionView(bundled: deck ?? [], personal: personal, states: index, statuses: planner.status)
+            } label: {
+                tabLabel("واژه‌ها", destination: .vocabulary, icon: "rectangle.on.rectangle", selectedIcon: "rectangle.on.rectangle.fill")
             }
-            Tab("پیشرفت", systemImage: "chart.bar.xaxis", value: Destination.progress) {
+            Tab(value: Destination.progress) {
                 progress(planner)
+            } label: {
+                tabLabel("پیشرفت", destination: .progress, icon: "chart.bar", selectedIcon: "chart.bar.fill")
             }
-            Tab("تنظیمات", systemImage: "gearshape", value: Destination.settings) {
+            Tab(value: Destination.settings) {
                 SettingsView(states: states, events: events, readingContainer: readingContainer) {
                     readingRecords = [:]
                     dailyReading = nil
                     readingPositions = [:]
                 }
+            } label: {
+                tabLabel("تنظیمات", destination: .settings, icon: "gearshape", selectedIcon: "gearshape.fill")
             }
         }
         .sheet(item: $session, onDismiss: { presentedStudyMode = nil }) { StudyView(plan: $0) }
@@ -165,6 +172,15 @@ struct Library: View {
         }
     }
 
+    private func tabLabel(_ title: String, destination: Destination, icon: String, selectedIcon: String) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: selection == destination ? selectedIcon : icon)
+                .environment(\.symbolVariants, .none)
+        }
+    }
+
     private func makePlanner(at date: Date, recalls: [Recall], calendar: Calendar = .current) -> StudyPlanner {
         StudyPlanner(cards: cards, progress: stateByID.mapValues(\.progress), goal: goal,
                      at: date, calendar: calendar, recalls: recalls)
@@ -174,7 +190,7 @@ struct Library: View {
                        dailyProgress: DailyLearningProgress) -> some View {
         let next = todayMessage(for: planner)
         return Page(avoidsFloatingTabBar: true, density: .compact) {
-            todayHeader(at: date)
+            TodayHeader(date: date)
 
             TodayWelcomeCard(title: next.title, detail: next.detail, button: next.button,
                              completed: planner.reachedGoalToday, start: startNextAction)
@@ -243,7 +259,7 @@ struct Library: View {
                                       start: { openReading(storyID: story.id) }, showLibrary: { openReading() })
         } else if readingContainer != nil, !stories.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text("داستان پیشنهادی امروز").font(HeadingFont.section)
+                Text("داستان پیشنهادی امروز").font(DashboardFont.section).accessibilityAddTraits(.isHeader)
                 if dailyReading?.day == day {
                     Text("داستان امروز در دسترس نیست.").foregroundStyle(Palette.muted)
                 } else {
@@ -253,110 +269,57 @@ struct Library: View {
                 Button("همهٔ داستان‌ها") { openReading() }
                     .frame(minHeight: 44)
             }
-            .modifier(Panel(fill: Palette.tint))
+            .modifier(Panel(padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                Text("داستان‌خوانی").font(HeadingFont.section)
+                Text("داستان‌خوانی").font(DashboardFont.section).accessibilityAddTraits(.isHeader)
                 Text("داستان‌ها در دسترس نیستند. برنامه را دوباره باز کن.")
                     .foregroundStyle(Palette.muted)
             }
-            .modifier(Panel())
-        }
-    }
-
-    private func todayHeader(at date: Date) -> some View {
-        let persianDate = Date.FormatStyle(locale: Locale(identifier: "fa_IR"),
-                                           calendar: Calendar(identifier: .persian))
-        let dateBlock = VStack(alignment: .leading, spacing: 2) {
-            Text(date.formatted(persianDate.weekday(.wide)))
-                .font(HeadingFont.section)
-            Text(date.formatted(persianDate.day().month(.wide).year()))
-                .font(PersianFont.subheadline)
-                .foregroundStyle(Palette.muted)
-        }
-        .accessibilityElement(children: .combine)
-
-        let wordmark = Text("Elphy")
-            .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            .foregroundStyle(Palette.sage)
-            .environment(\.layoutDirection, .leftToRight)
-
-        return VStack(spacing: 8) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 16) {
-                    dateBlock.fixedSize(horizontal: true, vertical: false)
-                    Spacer(minLength: 0)
-                    wordmark.fixedSize(horizontal: true, vertical: false)
-                }
-                VStack(spacing: 6) {
-                    dateBlock.frame(maxWidth: .infinity, alignment: .leading)
-                    wordmark.frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
-            Rectangle()
-                .fill(Palette.border)
-                .frame(height: 1)
-                .accessibilityHidden(true)
+            .modifier(Panel(padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
         }
     }
 
     private func dailyPlanPanel(_ planner: StudyPlanner, progress: DailyLearningProgress) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let due = planner.dueCards.count
+        return VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
             ViewThatFits(in: .horizontal) {
-                HStack {
+                HStack(spacing: DashboardMetrics.inline) {
                     dailyHeading.fixedSize(horizontal: true, vertical: false)
-                    Spacer(minLength: 8)
+                    Spacer(minLength: 0)
                     dailyGoalPicker.fixedSize(horizontal: true, vertical: false)
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 0) {
                     dailyHeading
                     dailyGoalPicker
                 }
             }
-            let meter = DailyProgressRing(progress: progress, celebration: goalCelebration)
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 12) {
-                    meter
-                    dailyStatus(planner)
-                }
+            if progress.target > 0 {
+                DailyProgressMeter(progress: progress, celebration: goalCelebration)
             } else {
-                HStack(spacing: 12) {
-                    meter
-                    dailyStatus(planner)
+                Text(planner.introducedToday > 0
+                     ? "\(fa(planner.introducedToday)) واژهٔ تازه تمرین کردی."
+                     : planner.remainingNew == 0 ? "واژهٔ تازه‌ای در صف نیست" : "امروز فقط مرور")
+                    .font(DashboardFont.action)
+            }
+            Divider().overlay(Palette.border).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
+                Label(due > 0 ? "\(fa(due)) واژه آمادهٔ مرور" : "فعلاً واژه‌ای برای مرور نداری",
+                      systemImage: due > 0 ? "arrow.clockwise" : "checkmark.circle")
+                    .font(due > 0 ? DashboardFont.action : DashboardFont.body)
+                    .foregroundStyle(due > 0 ? Palette.sage : Palette.muted)
+                if planner.scheduledLaterToday > 0 {
+                    Text("\(fa(planner.scheduledLaterToday)) واژه برای مرور در ادامهٔ امروز")
+                        .font(DashboardFont.metadata)
+                        .foregroundStyle(Palette.muted)
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
-    }
-
-    private func dailyStatus(_ planner: StudyPlanner) -> some View {
-        let due = planner.dueCards.count
-        return VStack(alignment: .leading, spacing: 4) {
-            if planner.effectiveGoal > 0 {
-                Text(planner.reachedGoalToday ? "هدف امروز کامل شد" : "واژه‌های تازهٔ تمرین‌شده")
-                    .font(PersianFont.emphasis)
-            } else if planner.introducedToday > 0 {
-                Text("\(fa(planner.introducedToday)) واژهٔ تازه در این روز")
-                    .font(PersianFont.emphasis)
-            } else {
-                Text(planner.remainingNew == 0 ? "واژهٔ تازه‌ای در صف نیست" : "امروز فقط مرور")
-                    .font(PersianFont.emphasis)
-            }
-            Label(due > 0 ? "\(fa(due)) واژه آمادهٔ مرور" : "فعلاً مروری آماده نیست",
-                  systemImage: due > 0 ? "tray.full" : "checkmark.circle")
-                .font(PersianFont.subheadline)
-                .foregroundStyle(due > 0 ? Palette.sage : Palette.muted)
-            if planner.scheduledLaterToday > 0 {
-                Text("\(fa(planner.scheduledLaterToday)) واژه برای مرور در ادامهٔ امروز")
-                    .font(PersianFont.subheadline)
-                    .foregroundStyle(Palette.muted)
-            }
-        }
+        .modifier(Panel(fill: Palette.paper, padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
     }
 
     private var dailyHeading: some View {
-        Text("برنامهٔ امروز").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
+        Text("برنامهٔ امروز").font(DashboardFont.section).accessibilityAddTraits(.isHeader)
     }
 
     private func todayMessage(for planner: StudyPlanner)
@@ -425,10 +388,11 @@ struct Library: View {
             if showsPractice { practiceActivities(planner) }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
-                Text("تمرین اختیاری").font(HeadingFont.section)
-                if !showsPractice && planner.practicedCards.isEmpty {
-                    Text("آزمون و مرور آزاد پس از اولین تمرین باز می‌شوند.")
-                        .font(PersianFont.subheadline)
+                Text("تمرین اختیاری").font(DashboardFont.section).accessibilityAddTraits(.isHeader)
+                if !showsPractice {
+                    Text(planner.practicedCards.isEmpty ? "آزمون و مرور آزاد پس از اولین تمرین باز می‌شوند."
+                         : "آزمون، مرور آزاد و واژه‌های دشوار")
+                        .font(DashboardFont.metadata)
                         .foregroundStyle(Palette.muted)
                 }
             }
@@ -436,7 +400,7 @@ struct Library: View {
             .contentShape(Rectangle())
             .accessibilityElement(children: .combine)
         }
-        .modifier(Panel(padding: 14))
+        .modifier(Panel(padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
     }
 
     private func practiceActivities(_ planner: StudyPlanner) -> some View {
@@ -530,7 +494,10 @@ struct Library: View {
             }
         }
         .pickerStyle(.menu)
+        .labelsHidden()
+        .font(DashboardFont.action)
         .frame(minHeight: 44)
+        .accessibilityLabel("هدف روزانه")
     }
 
     private func masteryPanel(_ mastery: MasteryBreakdown) -> some View {

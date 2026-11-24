@@ -1,5 +1,40 @@
 import SwiftUI
 
+struct TodayHeader: View {
+    let date: Date
+    @ScaledMetric(relativeTo: .largeTitle) private var wordmarkSize = 31.0
+
+    var body: some View {
+        let persianDate = Date.FormatStyle(locale: Locale(identifier: "fa_IR"),
+                                           calendar: Calendar(identifier: .persian))
+        let dateBlock = VStack(alignment: .leading, spacing: 0) {
+            Text(date.formatted(persianDate.weekday(.wide)))
+                .font(DashboardFont.section)
+            Text(date.formatted(persianDate.day().month(.wide).year()))
+                .font(DashboardFont.metadata)
+                .foregroundStyle(Palette.muted)
+        }
+        .accessibilityElement(children: .combine)
+
+        let wordmark = Text("Elphy")
+            .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
+            .foregroundStyle(Palette.sage)
+            .environment(\.layoutDirection, .leftToRight)
+
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: DashboardMetrics.padding) {
+                dateBlock.fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 0)
+                wordmark.fixedSize(horizontal: true, vertical: false)
+            }
+            VStack(spacing: DashboardMetrics.micro) {
+                dateBlock.frame(maxWidth: .infinity, alignment: .leading)
+                wordmark.frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+}
+
 struct TodayWelcomeCard: View {
     let title: String
     let detail: String
@@ -9,22 +44,22 @@ struct TodayWelcomeCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var message: some View {
-        VStack(alignment: .leading, spacing: completed ? 3 : 5) {
+        VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
             Text(title)
-                .font(completed ? HeadingFont.section : HeadingFont.title)
+                .font(DashboardFont.hero)
                 .accessibilityAddTraits(.isHeader)
             Text(detail)
-                .font(PersianFont.body)
+                .font(DashboardFont.body)
                 .foregroundStyle(Palette.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: completed ? 8 : 12) {
+        VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
             if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 10) {
-                    ElphyMascotView(mood: mascotMood, size: 128)
+                VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
+                    ElphyMascotView(mood: mascotMood, size: 108)
                     message
                 }
             } else {
@@ -35,10 +70,10 @@ struct TodayWelcomeCard: View {
             }
             if let button {
                 Button(button, action: start)
-                    .buttonStyle(PrimaryButton())
+                    .buttonStyle(PrimaryButton(compact: true))
             }
         }
-        .modifier(Panel(fill: Palette.tint, padding: completed ? 14 : 16))
+        .modifier(Panel(fill: Palette.tint, padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
     }
     private var mascotMood: ElphyMascotView.Mood {
         completed ? .celebrating : .welcome
@@ -46,7 +81,7 @@ struct TodayWelcomeCard: View {
 }
 
 private struct WelcomeCardRow: Layout {
-    private let spacing: CGFloat = 14
+    private let spacing = DashboardMetrics.group
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? 318
@@ -68,7 +103,7 @@ private struct WelcomeCardRow: Layout {
 
     private func mascotSize(for width: CGFloat) -> CGFloat {
         // Spend spare space on the mascot while keeping room for the Persian message.
-        min(128, max(0, width - spacing) / 2, max(104, width - spacing - 174))
+        min(112, max(0, width - spacing) / 2, max(88, width - spacing - 174))
     }
 }
 
@@ -86,47 +121,43 @@ private struct WelcomeCardRow: Layout {
     .environment(\.layoutDirection, .rightToLeft)
 }
 
-struct DailyProgressRing: View {
+struct DailyProgressMeter: View {
     let progress: DailyLearningProgress
     let celebration: UUID?
-    @ScaledMetric(relativeTo: .body) private var diameter = 84.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sparkleVisible = false
     @State private var playedCelebration: UUID?
 
-    private var count: Int { progress.count }
-    private var target: Int { progress.target }
-
     var body: some View {
-        ZStack {
-            Circle().strokeBorder(Palette.goalTrack, lineWidth: 7)
-            if target > 0 {
-                Circle()
-                    .inset(by: 3.5)
-                    .trim(from: 0, to: progress.fraction)
-                    .stroke(Palette.sage, style: StrokeStyle(lineWidth: sparkleVisible ? 9 : 7, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .opacity(progress.fraction == 0 ? 0 : 1)
-                VStack(spacing: 0) {
-                    Text(fa(count))
-                        .font(PersianFont.meaning)
-                        .monospacedDigit()
-                        .contentTransition(reduceMotion ? .identity : .numericText(value: Double(count)))
-                    Text("از \(fa(target))").font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-                        .contentTransition(reduceMotion ? .identity : .numericText(value: Double(target)))
+        VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DashboardMetrics.inline) {
+                    title.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    count.fixedSize(horizontal: true, vertical: false)
                 }
-            } else {
-                Image(systemName: "arrow.counterclockwise")
-                    .font(.title2)
-                    .foregroundStyle(Palette.sage)
+                VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
+                    title
+                    count
+                }
             }
+            GeometryReader { geometry in
+                Capsule()
+                    .fill(Palette.goalTrack)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(Palette.sage)
+                            .frame(width: geometry.size.width * progress.fraction)
+                    }
+            }
+            .frame(height: 6)
+            .accessibilityHidden(true)
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.32), value: progress)
-        .frame(width: diameter, height: diameter)
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .bottomTrailing) {
             if sparkleVisible {
                 Image(systemName: "sparkle")
-                    .font(.title3.weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.celebrationGold)
                     .padding(4)
                     .background(Palette.paper, in: Circle())
@@ -136,8 +167,8 @@ struct DailyProgressRing: View {
         }
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("هدف واژه‌های جدید")
-        .accessibilityValue(target > 0 ? "\(fa(count)) از \(fa(target)) واژه" : "بدون هدف واژهٔ جدید")
+        .accessibilityLabel(progress.fraction == 1 ? "هدف امروز کامل شد" : "یادگیری واژه‌های جدید")
+        .accessibilityValue("\(fa(progress.count)) از \(fa(progress.target)) واژه")
         .task(id: celebration) {
             sparkleVisible = false
             guard let celebration, celebration != playedCelebration, !reduceMotion else { return }
@@ -153,5 +184,17 @@ struct DailyProgressRing: View {
         .onChange(of: reduceMotion) { _, reduced in
             if reduced { sparkleVisible = false }
         }
+    }
+
+    private var title: some View {
+        Text(progress.fraction == 1 ? "هدف امروز کامل شد" : "یادگیری واژه‌های جدید")
+            .font(DashboardFont.action)
+    }
+
+    private var count: some View {
+        Text("\(fa(progress.count)) از \(fa(progress.target)) واژه")
+            .font(DashboardFont.metadata)
+            .foregroundStyle(Palette.sage)
+            .contentTransition(reduceMotion ? .identity : .numericText(value: Double(progress.count)))
     }
 }

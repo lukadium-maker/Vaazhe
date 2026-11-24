@@ -169,6 +169,35 @@ final class ElphyTests: XCTestCase {
         XCTAssertNil(first.completionPlan())
     }
 
+    func testMorePracticeAfterFirstGoalIncludesOtherPracticedWordsAlongsideOneDifficultWord() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let cards = (0..<6).map { index in
+            var copy = card
+            copy.id = "practice-\(index)"
+            return copy
+        }
+        let practiced = Array(cards.prefix(5))
+        let difficult = practiced[2]
+        let progress = Dictionary(uniqueKeysWithValues: practiced.map {
+            ($0.id, StudyPlanner.Progress(introduced: now, due: now.addingTimeInterval(600)))
+        })
+        let recalls = [
+            Recall(cardID: difficult.id, date: now.addingTimeInterval(-30), rating: .again),
+            Recall(cardID: difficult.id, date: now, rating: .again)
+        ]
+        let planner = StudyPlanner(cards: cards, progress: progress, goal: 5, at: now,
+                                   calendar: calendar, recalls: recalls)
+        XCTAssertEqual(TodayLearningState(planner: planner), .goalComplete(action: .practice))
+        XCTAssertEqual(planner.difficultPlan.cards.map(\.id), [difficult.id])
+        let ordered = try XCTUnwrap(planner.completionPlan())
+        XCTAssertEqual(ordered.cards.first?.id, difficult.id)
+        let practice = try XCTUnwrap(planner.completionPlan(shufflePractice: true))
+        XCTAssertEqual(practice.mode, .practice)
+        XCTAssertEqual(practice.cards.count, practiced.count)
+        XCTAssertEqual(Set(practice.cards.map(\.id)), Set(practiced.map(\.id)))
+        XCTAssertTrue(practice.newIDs.isEmpty)
+    }
+
     func testFirstLaunchAndChangingGoal() {
         let calendar = Calendar(identifier: .gregorian)
         let cards = (0..<13).map { index in

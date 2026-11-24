@@ -217,17 +217,20 @@ struct StudyPlanner {
     let practicedCards: [Card]
     let difficultCards: [Card]
     let masteredCards: [Card]
+    private let cardsIntroducedToday: [Card]
 
     init(cards: [Card], progress: [String: Progress], goal: Int,
          at date: Date, calendar: Calendar, recalls: [Recall] = []) {
         let history = Dictionary(grouping: recalls.filter { $0.date <= date }, by: \.cardID)
         let active = cards.filter { progress[$0.id] != nil }
         let fresh = cards.filter { progress[$0.id] == nil }
-        let seenToday = active.filter { card in
+        let introducedTodayCards = active.filter { card in
             guard let state = progress[card.id] else { return false }
             return calendar.isDate(state.introduced, inSameDayAs: date)
-        }.count
+        }
+        let seenToday = introducedTodayCards.count
         let available = fresh.filter(\.isPersonal) + fresh.filter { !$0.isPersonal }
+        cardsIntroducedToday = introducedTodayCards
         introducedToday = seenToday
         remainingNew = fresh.count
         remainingStarter = fresh.filter { !$0.isPersonal }.count
@@ -282,24 +285,26 @@ struct StudyPlanner {
     }
 
     func morePracticePlan(shuffle: Bool) -> StudyPlan? {
-        let pool = difficultCards.isEmpty
-            ? (shuffle ? practicedCards.shuffled() : practicedCards)
-            : difficultCards
-        return optionalPlan(for: pool)
+        let difficultIDs = Set(difficultCards.map(\.id))
+        let todayIDs = Set(cardsIntroducedToday.map(\.id))
+        let today = cardsIntroducedToday.filter { !difficultIDs.contains($0.id) }
+        let other = practicedCards.filter { !difficultIDs.contains($0.id) && !todayIDs.contains($0.id) }
+        return optionalPlan(for: difficultCards + today + (shuffle ? other.shuffled() : other), shuffle: shuffle)
     }
 
     var difficultPlan: StudyPlan {
         StudyPlan(cards: difficultCards, newIDs: [], mode: .difficult)
     }
 
-    func optionalPlan(for cards: [Card], limit: Int = 10) -> StudyPlan? {
+    func optionalPlan(for cards: [Card], limit: Int = 10, shuffle: Bool = false) -> StudyPlan? {
         guard limit > 0 else { return nil }
         let eligible = cards.filter {
             guard let stage = status[$0.id]?.stage else { return false }
             return stage != .new
         }
         guard !eligible.isEmpty else { return nil }
-        return StudyPlan(cards: Array(eligible.prefix(limit)), newIDs: [], mode: .practice)
+        let selected = Array(eligible.prefix(limit))
+        return StudyPlan(cards: shuffle ? selected.shuffled() : selected, newIDs: [], mode: .practice)
     }
 }
 

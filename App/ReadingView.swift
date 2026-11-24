@@ -148,6 +148,91 @@ struct ReadingRecommendationCard: View {
     private var hasCover: Bool { ReadingCover.assetName(for: story.id) != nil }
 
     var body: some View {
+        if let showLibrary {
+            todayCard(showLibrary: showLibrary)
+        } else {
+            libraryCard
+        }
+    }
+
+    private func todayCard(showLibrary: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DashboardMetrics.inline) {
+                    heading.fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    completionBadge.fixedSize(horizontal: true, vertical: false)
+                }
+                VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
+                    heading
+                    completionBadge
+                }
+            }
+            if libraryCompleted {
+                Text("آفرین! همهٔ داستان‌ها را خوانده‌ای.")
+                    .font(DashboardFont.metadata)
+                    .foregroundStyle(Palette.sage)
+            }
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
+                    todayStoryDetails
+                    if hasCover {
+                        ReadingStoryCover(storyID: story.id, width: 152)
+                    }
+                }
+            } else {
+                HStack(alignment: .center, spacing: DashboardMetrics.group) {
+                    todayStoryDetails
+                    ReadingStoryCover(storyID: story.id, width: hasCover ? 120 : 52)
+                }
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DashboardMetrics.group) {
+                    Button(actionTitle, action: start)
+                        .buttonStyle(PrimaryButton(compact: true))
+                        .fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 0)
+                    libraryButton(showLibrary).fixedSize(horizontal: true, vertical: false)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    Button(actionTitle, action: start).buttonStyle(PrimaryButton(compact: true))
+                    libraryButton(showLibrary)
+                }
+            }
+        }
+        .modifier(Panel(padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
+    }
+
+    private var todayStoryDetails: some View {
+        VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
+            ReadingStoryTitle(story: story, featured: true, dashboard: true)
+                .accessibilityAddTraits(.isHeader)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DashboardMetrics.micro) { todayStoryMetadata }
+                    .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: DashboardMetrics.micro) { todayStoryMetadata }
+            }
+            if matchingVocabularyCount > 0 {
+                Text("\(fa(matchingVocabularyCount)) واژهٔ آشنا")
+                    .font(DashboardFont.metadata)
+                    .foregroundStyle(Palette.muted)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var todayStoryMetadata: some View {
+        ReadingLevelLabel(level: story.level, compact: true)
+            .padding(.horizontal, DashboardMetrics.inline)
+            .padding(.vertical, 2)
+            .background(Palette.paper, in: Capsule())
+        Text("حدود \(fa(story.readingMinutes)) دقیقه")
+            .font(DashboardFont.metadata)
+            .foregroundStyle(Palette.muted)
+    }
+
+    private var libraryCard: some View {
         VStack(alignment: .leading, spacing: 9) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
@@ -159,10 +244,6 @@ struct ReadingRecommendationCard: View {
                     heading
                     completionBadge
                 }
-            }
-            if libraryCompleted {
-                Text("آفرین! همهٔ داستان‌ها را خوانده‌ای.").foregroundStyle(Palette.sage)
-                    .font(PersianFont.subheadlineEmphasis)
             }
             if dynamicTypeSize.isAccessibilitySize && hasCover {
                 ReadingStoryCover(storyID: story.id, width: 104)
@@ -189,21 +270,7 @@ struct ReadingRecommendationCard: View {
             if matchingVocabularyCount == 0, let libraryExplanation {
                 Text(libraryExplanation).font(PersianFont.subheadline).foregroundStyle(Palette.muted)
             }
-            if let showLibrary {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        studyButton.fixedSize(horizontal: true, vertical: false)
-                        Spacer(minLength: 0)
-                        libraryButton(showLibrary).fixedSize(horizontal: true, vertical: false)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        studyButton
-                        libraryButton(showLibrary)
-                    }
-                }
-            } else {
-                studyButton
-            }
+            Button(actionTitle, action: start).buttonStyle(PrimaryButton())
         }
         .modifier(Panel(padding: 16))
     }
@@ -212,7 +279,7 @@ struct ReadingRecommendationCard: View {
         HStack(spacing: 6) {
             Text(inLibrary ? (matchingVocabularyCount == 0 ? "پیشنهاد برای شروع" : "پیشنهاد برای تو")
                  : "داستان پیشنهادی امروز")
-                .font(HeadingFont.section)
+                .font(inLibrary ? HeadingFont.section : DashboardFont.section)
                 .accessibilityAddTraits(.isHeader)
             if inLibrary && hasCover {
                 ElphyMascotView(mood: .reading, size: 36, animatesAppearance: true)
@@ -223,22 +290,24 @@ struct ReadingRecommendationCard: View {
     @ViewBuilder private var completionBadge: some View {
         if completed {
             Label("تکمیل‌شده", systemImage: "checkmark.circle")
-                .font(PersianFont.subheadlineEmphasis)
+                .font(inLibrary ? PersianFont.subheadlineEmphasis : DashboardFont.metadata)
                 .foregroundStyle(Palette.sage)
         }
     }
 
-    private var studyButton: some View {
-        let title = ReadingCardAction(record: record, hasReadingPosition: hasReadingPosition).title
-        return Button(title, action: start).buttonStyle(PrimaryButton())
+    private var actionTitle: String {
+        ReadingCardAction(record: record, hasReadingPosition: hasReadingPosition).title
     }
 
     private func libraryButton(_ action: @escaping () -> Void) -> some View {
-        Button("همهٔ داستان‌ها", action: action)
-            .font(PersianFont.subheadlineEmphasis)
-            .frame(minHeight: 44)
-            .buttonStyle(.plain)
-            .foregroundStyle(Palette.sage)
+        Button(action: action) {
+            Text("همهٔ داستان‌ها")
+                .font(DashboardFont.action)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Palette.sage)
     }
 
     @ViewBuilder private var metadata: some View {
@@ -282,10 +351,11 @@ private struct ReadingStoryCover: View {
 
 private struct ReadingLevelLabel: View {
     let level: ReadingLevel
+    var compact = false
 
     var body: some View {
         Text(level.rawValue)
-            .font(.subheadline.monospaced().weight(.semibold))
+            .font((compact ? Font.footnote : .subheadline).monospaced().weight(.semibold))
             .foregroundStyle(Palette.sage)
             .environment(\.layoutDirection, .leftToRight)
             .accessibilityLabel("سطح \(level.rawValue)")
@@ -295,14 +365,15 @@ private struct ReadingLevelLabel: View {
 private struct ReadingStoryTitle: View {
     let story: ReadingStory
     var featured = false
+    var dashboard = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: featured ? 1 : 4) {
-            Text(story.titleFa).font(featured ? HeadingFont.title : HeadingFont.section)
+            Text(story.titleFa).font(dashboard ? DashboardFont.story : featured ? HeadingFont.title : HeadingFont.section)
             Text(story.titleEn)
-                .font(.system(featured ? .body : .title3, design: .serif).weight(.semibold))
+                .font(.system(dashboard ? .subheadline : featured ? .body : .title3, design: .serif).weight(.semibold))
                 .foregroundStyle(featured ? Palette.muted : Palette.ink)
-                .readingEnglish()
+                .readingEnglish(alignedWithPersian: dashboard)
         }
     }
 }
@@ -584,9 +655,9 @@ private func encounteredCards(in story: ReadingStory, cards: [String: Card]) -> 
 }
 
 private extension View {
-    func readingEnglish() -> some View {
-        frame(maxWidth: .infinity, alignment: .leading)
-            .multilineTextAlignment(.leading)
+    func readingEnglish(alignedWithPersian: Bool = false) -> some View {
+        frame(maxWidth: .infinity, alignment: alignedWithPersian ? .trailing : .leading)
+            .multilineTextAlignment(alignedWithPersian ? .trailing : .leading)
             .environment(\.layoutDirection, .leftToRight)
             .environment(\.locale, Locale(identifier: "en_US"))
     }

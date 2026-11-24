@@ -99,10 +99,11 @@ struct Page<Content: View>: View {
 
     var body: some View {
         let scrollView = ScrollView {
-            VStack(alignment: .leading, spacing: density == .compact ? 16 : 22) { content }
+            VStack(alignment: .leading, spacing: density == .compact ? DashboardMetrics.padding : 22) { content }
                 .frame(maxWidth: 560)
                 .padding(.horizontal, density == .compact ? 20 : 24)
-                .padding(.vertical, density == .compact ? 16 : 24)
+                .padding(.top, density == .compact ? DashboardMetrics.inline : 24)
+                .padding(.bottom, density == .compact ? 20 : 24)
                 .frame(maxWidth: .infinity)
         }
         Group {
@@ -224,24 +225,29 @@ private struct TabBarOverlapReader: UIViewRepresentable {
 struct Panel: ViewModifier {
     var fill = Palette.card
     var padding: CGFloat = 20
+    var radius: CGFloat = 24
 
     func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius)
         content.padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(fill, in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Palette.border))
+            .background(fill, in: shape)
+            .overlay(shape.strokeBorder(Palette.border).allowsHitTesting(false))
     }
 }
 
 struct PrimaryButton: ButtonStyle {
+    var compact = false
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(PersianFont.emphasis)
+            .font(compact ? DashboardFont.action : PersianFont.emphasis)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 28)
-            .padding(12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, compact ? DashboardMetrics.inline : 12)
             .foregroundStyle(Palette.buttonText)
-            .background(Palette.sage, in: RoundedRectangle(cornerRadius: 16))
+            .background(Palette.sage, in: RoundedRectangle(cornerRadius: compact ? DashboardMetrics.controlRadius : 16))
             .modifier(PressFeedback(pressed: configuration.isPressed))
     }
 }
@@ -270,6 +276,24 @@ enum HeadingFont {
     static let large = Font.custom("Lalezar-Regular", size: 36, relativeTo: .largeTitle)
     static let title = Font.custom("Lalezar-Regular", size: 28, relativeTo: .title)
     static let section = Font.custom("Lalezar-Regular", size: 21, relativeTo: .headline)
+}
+
+enum DashboardMetrics {
+    static let micro: CGFloat = 4
+    static let inline: CGFloat = 8
+    static let group: CGFloat = 12
+    static let padding: CGFloat = 16
+    static let cardRadius: CGFloat = 20
+    static let controlRadius: CGFloat = 12
+}
+
+enum DashboardFont {
+    static let hero = Font.custom("Lalezar-Regular", size: 24, relativeTo: .title2)
+    static let section = Font.custom("Vazirmatn-SemiBold", size: 18, relativeTo: .headline)
+    static let story = Font.custom("Vazirmatn-SemiBold", size: 20, relativeTo: .title3)
+    static let body = Font.custom("Vazirmatn-Regular", size: 16, relativeTo: .body)
+    static let metadata = Font.custom("Vazirmatn-Regular", size: 13, relativeTo: .footnote)
+    static let action = Font.custom("Vazirmatn-SemiBold", size: 16, relativeTo: .headline)
 }
 
 extension View {
