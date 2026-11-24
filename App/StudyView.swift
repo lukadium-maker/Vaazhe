@@ -6,6 +6,7 @@ struct StudyView: View {
     @State private var failed = false
     @State private var visibleAttempt: UUID?
     @Environment(\.modelContext) private var context
+    @Environment(AppClock.self) private var clock
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -134,7 +135,7 @@ struct StudyView: View {
     private func record(_ rating: Rating, attemptID: UUID) {
         do {
             try session.submit(rating, for: attemptID) { card, rating, id in
-                try ReviewStore.record(card, rating: rating, attemptID: id, date: .now, in: context)
+                try clock.record(card, rating: rating, attemptID: id, in: context)
             }
             if session.attemptID != attemptID {
                 (rating == .again ? TapCue.retry : .rate).play()

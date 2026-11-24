@@ -27,6 +27,13 @@ import SwiftData
         self.dayKey = day.key
         self.storyID = storyID
     }
+
+    #if DEBUG
+    init(dayKey: String, storyID: String) {
+        self.dayKey = dayKey
+        self.storyID = storyID
+    }
+    #endif
 }
 
 @MainActor enum ReadingStore {
@@ -56,6 +63,18 @@ import SwiftData
         try save(context)
     }
 
+    static func dailyStoryID(stories: [ReadingStory], planner: StudyPlanner,
+                             progress: [String: StudyPlanner.Progress], recalls: [Recall],
+                             records: [String: ReadingRecord], at date: Date,
+                             calendar: Calendar, in context: ModelContext) throws -> String? {
+        try dailyStoryID(at: date, calendar: calendar, availableIDs: Set(stories.map(\.id)), in: context) { previousID in
+            ReadingRecommendationEngine.recommend(
+                stories: stories, statuses: planner.status, progress: progress,
+                recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID
+            )?.storyID
+        }
+    }
+
     static func dailyStoryID(at date: Date, calendar: Calendar, availableIDs: Set<String>,
                              in context: ModelContext, select: (String?) -> String?) throws -> String? {
         let today = ReadingDay(at: date, calendar: calendar)
@@ -81,14 +100,15 @@ import SwiftData
         return try context.fetch(query).first
     }
 
-    static func markRead(_ storyID: String, at date: Date = .now, in context: ModelContext) throws {
+    static func markRead(_ storyID: String, at date: Date, in context: ModelContext) throws {
         let progress = try progress(for: storyID, in: context)
         guard progress.readAt == nil else { return }
         progress.readAt = date
         try save(context)
     }
 
-    static func complete(_ story: ReadingStory, score: Int, at date: Date = .now, in context: ModelContext) throws {
+    static func complete(_ story: ReadingStory, score: Int, at date: Date,
+                         in context: ModelContext, beforeSave: () -> Void = {}) throws {
         guard (0...story.questions.count).contains(score) else { throw CocoaError(.coderInvalidValue) }
         let progress = try progress(for: story.id, in: context)
         if progress.readAt == nil { progress.readAt = date }
@@ -96,6 +116,7 @@ import SwiftData
         progress.bestScore = max(progress.bestScore, score)
         progress.recentScore = score
         progress.lastCompletion = date
+        beforeSave()
         try save(context)
     }
 

@@ -2,11 +2,12 @@ import SwiftUI
 
 struct TodayHeader: View {
     let date: Date
+    let timeZone: TimeZone
     @ScaledMetric(relativeTo: .largeTitle) private var wordmarkSize = 31.0
 
     var body: some View {
         let persianDate = Date.FormatStyle(locale: Locale(identifier: "fa_IR"),
-                                           calendar: Calendar(identifier: .persian))
+                                           calendar: Calendar(identifier: .persian), timeZone: timeZone)
         let dateBlock = VStack(alignment: .leading, spacing: 0) {
             Text(date.formatted(persianDate.weekday(.wide)))
                 .font(DashboardFont.section)
