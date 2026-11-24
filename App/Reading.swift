@@ -35,6 +35,19 @@ struct ReadingStory: Decodable, Identifiable {
     }
 }
 
+enum ReadingCover {
+    private static let illustratedStoryIDs: Set<String> = [
+        "elfy-reading-01", "elfy-reading-02", "elfy-reading-03", "elfy-reading-04", "elfy-reading-05",
+        "elfy-reading-06", "elfy-reading-07", "elfy-reading-08", "elfy-reading-09", "elfy-reading-10",
+        "elfy-reading-11", "elfy-reading-12", "elfy-reading-13", "elfy-reading-14", "elfy-reading-15",
+        "elfy-reading-16", "elfy-reading-17", "elfy-reading-18", "elfy-reading-19", "elfy-reading-20"
+    ]
+
+    static func assetName(for storyID: String) -> String? {
+        illustratedStoryIDs.contains(storyID) ? "story_\(storyID)_cover" : nil
+    }
+}
+
 struct ReadingContent: Decodable {
     private let stories: [ReadingStory]
 
@@ -131,6 +144,28 @@ struct ReadingRecord {
     let lastCompletion: Date?
 
     var completed: Bool { attempts > 0 }
+}
+
+enum ReadingCardAction: Equatable {
+    case start, resume, reread
+
+    init(record: ReadingRecord?, hasReadingPosition: Bool) {
+        if record?.completed == true {
+            self = .reread
+        } else if record?.read == true || hasReadingPosition {
+            self = .resume
+        } else {
+            self = .start
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .start: "شروع مطالعه"
+        case .resume: "ادامهٔ مطالعه"
+        case .reread: "مطالعهٔ دوباره"
+        }
+    }
 }
 
 struct ReadingDay: Equatable {

@@ -1,11 +1,26 @@
 import XCTest
 import SwiftData
+#if canImport(UIKit)
+import UIKit
+#endif
 @testable import Elphy
 
 final class ElphyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private let card = Card(id: "personal-test", word: "arrive", partOfSpeech: "verb", level: "",
                             meaningFa: "رسیدن", exampleEn: "", exampleFa: "", topic: "")
+
+    #if canImport(UIKit)
+    @MainActor func testAllMascotPosesLoadFromTheAppBundle() throws {
+        let poses = ElphyMascotView.Mood.allCases
+        XCTAssertEqual(poses.count, 8)
+        for pose in poses {
+            let image = try XCTUnwrap(UIImage(named: pose.assetName, in: .main, compatibleWith: nil), pose.assetName)
+            let pixels = try XCTUnwrap(image.cgImage)
+            XCTAssertEqual(max(pixels.width, pixels.height), 420)
+        }
+    }
+    #endif
 
     func testSchedulingTransitions() {
         let calendar = Calendar(identifier: .gregorian)
@@ -95,6 +110,63 @@ final class ElphyTests: XCTestCase {
         XCTAssertEqual(missed.rated(.easy, at: missed.due, calendar: calendar).days, 4)
         XCTAssertEqual(old.rated(.good, at: now, calendar: calendar).days, 90)
         XCTAssertEqual(old.rated(.hard, at: now, calendar: calendar).days, 80)
+    }
+
+    func testDailyGoalCelebrationRequiresNewLearningAtTheSameGoalOnTheSameDay() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        func progress(_ count: Int, _ target: Int, goal: Int = 5, day: Date? = nil) -> DailyLearningProgress {
+            DailyLearningProgress(day: day ?? start, count: count, target: target, configuredGoal: goal)
+        }
+        XCTAssertTrue(progress(5, 5).reachedGoal(since: progress(4, 5)))
+        XCTAssertFalse(progress(5, 5).reachedGoal(since: progress(5, 5)))
+        XCTAssertFalse(progress(4, 4, goal: 4).reachedGoal(since: progress(4, 5)))
+        XCTAssertFalse(progress(5, 5, goal: 5).reachedGoal(since: progress(4, 5, goal: 10)))
+        XCTAssertFalse(progress(5, 5, day: start.addingTimeInterval(86_400)).reachedGoal(since: progress(4, 5)))
+        XCTAssertFalse(progress(0, 0).reachedGoal(since: progress(0, 0)))
+    }
+
+    func testTodayPresentationForNewPartialCompletedAndReviewReadyLearners() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let day = calendar.startOfDay(for: now)
+        let tomorrow = day.addingTimeInterval(86_400)
+        let cards = (0..<12).map { index in
+            var item = card
+            item.id = "word-\(index)"
+            return item
+        }
+        func planner(_ learned: Int, dueFirst: Bool = false, goal: Int = 10) -> StudyPlanner {
+            let progress = Dictionary(uniqueKeysWithValues: cards.prefix(learned).enumerated().map { index, card in
+                (card.id, StudyPlanner.Progress(introduced: day, due: dueFirst && index == 0 ? now : tomorrow))
+            })
+            return StudyPlanner(cards: cards, progress: progress, goal: goal, at: now, calendar: calendar)
+        }
+        func fraction(_ planner: StudyPlanner, goal: Int = 10) -> Double {
+            DailyLearningProgress(day: day, count: planner.introducedToday, target: planner.effectiveGoal,
+                                  configuredGoal: goal).fraction
+        }
+        let first = planner(0)
+        XCTAssertEqual(TodayLearningState(planner: first), .next(.learn))
+        XCTAssertEqual(fraction(first), 0)
+        XCTAssertTrue(first.dueCards.isEmpty)
+        let partial = planner(5)
+        XCTAssertEqual(TodayLearningState(planner: partial), .next(.continueStudy))
+        XCTAssertEqual(fraction(partial), 0.5)
+        XCTAssertEqual(partial.newCards.count, 5)
+        XCTAssertEqual(fraction(planner(5, goal: 20), goal: 20), 5.0 / 12)
+        let complete = planner(10)
+        XCTAssertEqual(TodayLearningState(planner: complete), .goalComplete(action: .practice))
+        XCTAssertEqual(fraction(complete), 1)
+        XCTAssertNil(complete.dailyPlan)
+        XCTAssertEqual(complete.completionPlan()?.mode, .practice)
+        XCTAssertEqual(complete.completionPlan()?.cards.map(\.id), cards.prefix(10).map(\.id))
+        XCTAssertTrue(complete.completionPlan()?.newIDs.isEmpty == true)
+        let ready = planner(10, dueFirst: true)
+        XCTAssertEqual(TodayLearningState(planner: ready), .goalComplete(action: .scheduled))
+        XCTAssertEqual(ready.dailyPlan?.cards.map(\.id), [cards[0].id])
+        XCTAssertEqual(ready.completionPlan()?.cards.map(\.id), [cards[0].id])
+        XCTAssertTrue(ready.completionPlan()?.newIDs.isEmpty == true)
+        XCTAssertNil(first.completionPlan())
     }
 
     func testFirstLaunchAndChangingGoal() {

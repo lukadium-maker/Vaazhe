@@ -20,6 +20,37 @@ final class ReadingTests: XCTestCase {
         return (try ReadingContent.load(cards: cards, from: contentBundle), cards)
     }
 
+    func testApprovedStoryCoversAreMappedByStableIDWithFallbackForOtherStories() throws {
+        let (stories, _) = try load()
+        let expected = [
+            "elfy-reading-01": "story_elfy-reading-01_cover",
+            "elfy-reading-02": "story_elfy-reading-02_cover",
+            "elfy-reading-03": "story_elfy-reading-03_cover",
+            "elfy-reading-04": "story_elfy-reading-04_cover",
+            "elfy-reading-05": "story_elfy-reading-05_cover",
+            "elfy-reading-06": "story_elfy-reading-06_cover",
+            "elfy-reading-07": "story_elfy-reading-07_cover",
+            "elfy-reading-08": "story_elfy-reading-08_cover",
+            "elfy-reading-09": "story_elfy-reading-09_cover",
+            "elfy-reading-10": "story_elfy-reading-10_cover",
+            "elfy-reading-11": "story_elfy-reading-11_cover",
+            "elfy-reading-12": "story_elfy-reading-12_cover",
+            "elfy-reading-13": "story_elfy-reading-13_cover",
+            "elfy-reading-14": "story_elfy-reading-14_cover",
+            "elfy-reading-15": "story_elfy-reading-15_cover",
+            "elfy-reading-16": "story_elfy-reading-16_cover",
+            "elfy-reading-17": "story_elfy-reading-17_cover",
+            "elfy-reading-18": "story_elfy-reading-18_cover",
+            "elfy-reading-19": "story_elfy-reading-19_cover",
+            "elfy-reading-20": "story_elfy-reading-20_cover"
+        ]
+        XCTAssertTrue(Set(expected.keys).isSubset(of: Set(stories.map(\.id))))
+        for story in stories.reversed() {
+            XCTAssertEqual(ReadingCover.assetName(for: story.id), expected[story.id])
+        }
+        XCTAssertNil(ReadingCover.assetName(for: "future-story"))
+    }
+
     func testBundledStoriesValidateWithVocabularyOffline() throws {
         let (stories, cards) = try load()
         let cardIDs = Set(cards.map(\.id))
@@ -63,6 +94,15 @@ final class ReadingTests: XCTestCase {
         XCTAssertTrue(try ReadingStore.records(in: context).isEmpty)
         XCTAssertEqual(try ReadingStore.dailyStoryID(at: now, calendar: calendar, availableIDs: ids,
                                                     in: context) { _ in replacement.id }, replacement.id)
+    }
+
+    func testStoryCardActionsForUnreadInProgressAndCompletedStories() {
+        XCTAssertEqual(ReadingCardAction(record: nil, hasReadingPosition: false), .start)
+        XCTAssertEqual(ReadingCardAction(record: nil, hasReadingPosition: true), .resume)
+        let read = ReadingRecord(read: true, bestScore: 0, recentScore: nil, attempts: 0, lastCompletion: nil)
+        XCTAssertEqual(ReadingCardAction(record: read, hasReadingPosition: false), .resume)
+        let completed = ReadingRecord(read: true, bestScore: 0, recentScore: 0, attempts: 1, lastCompletion: now)
+        XCTAssertEqual(ReadingCardAction(record: completed, hasReadingPosition: true), .reread)
     }
 
     func testLevelAndReadFilters() throws {

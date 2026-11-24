@@ -12,12 +12,26 @@ struct ReadingLibrary: View {
     let vocabularyProgress: [String: StudyPlanner.Progress]
     let recalls: [Recall]
     let now: Date
-    let initialStoryID: String?
+    @Binding private var positions: [String: Double]
 
     @Query private var progress: [ReadingProgress]
     @State private var path: [ReadingRoute] = []
     @State private var filter: ReadingFilter = .all
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    init(stories: [ReadingStory], cards: [String: Card], statuses: [String: VocabularyStatus],
+         vocabularyProgress: [String: StudyPlanner.Progress], recalls: [Recall], now: Date,
+         initialStoryID: String?, positions: Binding<[String: Double]>) {
+        self.stories = stories
+        self.cards = cards
+        self.statuses = statuses
+        self.vocabularyProgress = vocabularyProgress
+        self.recalls = recalls
+        self.now = now
+        _positions = positions
+        _path = State(initialValue: initialStoryID.map { [.passage($0)] } ?? [])
+    }
 
     private var records: [String: ReadingRecord] {
         Dictionary(uniqueKeysWithValues: progress.map { ($0.storyID, $0.record) })
@@ -33,7 +47,8 @@ struct ReadingLibrary: View {
                 ), let featured = stories.first(where: { $0.id == recommendation.storyID }) {
                     ReadingRecommendationCard(story: featured,
                                               matchingVocabularyCount: recommendation.matchingVocabularyIDs.count,
-                                              completed: records[featured.id]?.completed == true,
+                                              record: records[featured.id],
+                                              hasReadingPosition: (positions[featured.id] ?? 0) > 0,
                                               libraryExplanation: recommendation.explanation,
                                               start: { path.append(.passage(featured.id)) })
                 }
@@ -65,7 +80,9 @@ struct ReadingLibrary: View {
                 case .passage(let id):
                     if let story = stories.first(where: { $0.id == id }) {
                         ReadingPassageView(story: story, cards: cards, statuses: statuses,
-                                           hasRead: records[id]?.read == true) {
+                                           hasRead: records[id]?.read == true,
+                                           position: Binding(get: { positions[id, default: 0] },
+                                                             set: { positions[id] = $0 })) {
                             path.append(.quiz(id))
                         }
                     }
@@ -75,11 +92,6 @@ struct ReadingLibrary: View {
                                         returnToLibrary: { path.removeAll() })
                     }
                 }
-            }
-        }
-        .task {
-            if let initialStoryID, path.isEmpty {
-                path = [.passage(initialStoryID)]
             }
         }
     }
@@ -92,7 +104,17 @@ struct ReadingLibrary: View {
                 Image(systemName: "chevron.forward").font(.footnote)
                     .foregroundStyle(Palette.sage).accessibilityHidden(true)
             }
-            ReadingStoryTitle(story: story)
+            if dynamicTypeSize.isAccessibilitySize {
+                ReadingStoryCover(storyID: story.id, width: 92)
+                ReadingStoryTitle(story: story)
+            } else {
+                HStack(spacing: 12) {
+                    ReadingStoryTitle(story: story)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                    ReadingStoryCover(storyID: story.id, width: 92)
+                }
+            }
             if let record, record.completed {
                 Text("آزمون کامل شد • بهترین امتیاز \(fa(record.bestScore)) از \(fa(story.questions.count))")
                     .font(PersianFont.subheadline).foregroundStyle(Palette.sage)
@@ -113,15 +135,20 @@ struct ReadingLibrary: View {
 struct ReadingRecommendationCard: View {
     let story: ReadingStory
     let matchingVocabularyCount: Int
-    let completed: Bool
+    let record: ReadingRecord?
+    var hasReadingPosition = false
+    var libraryCompleted = false
     var libraryExplanation: String?
     let start: () -> Void
     var showLibrary: (() -> Void)?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var inLibrary: Bool { libraryExplanation != nil }
+    private var completed: Bool { record?.completed == true }
+    private var hasCover: Bool { ReadingCover.assetName(for: story.id) != nil }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 9) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     heading.fixedSize(horizontal: true, vertical: false)
@@ -133,9 +160,30 @@ struct ReadingRecommendationCard: View {
                     completionBadge
                 }
             }
-            ReadingStoryTitle(story: story)
+            if libraryCompleted {
+                Text("آفرین! همهٔ داستان‌ها را خوانده‌ای.").foregroundStyle(Palette.sage)
+                    .font(PersianFont.subheadlineEmphasis)
+            }
+            if dynamicTypeSize.isAccessibilitySize && hasCover {
+                ReadingStoryCover(storyID: story.id, width: 104)
+                ReadingStoryTitle(story: story, featured: true)
+            } else {
+                HStack(spacing: 12) {
+                    ReadingStoryTitle(story: story, featured: true)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                    if hasCover {
+                        ReadingStoryCover(storyID: story.id, width: 104)
+                    } else if inLibrary {
+                        ElphyMascotView(mood: .reading, size: dynamicTypeSize.isAccessibilitySize ? 44 : 60,
+                                       animatesAppearance: true)
+                    } else if !dynamicTypeSize.isAccessibilitySize {
+                        ReadingStoryCover(storyID: story.id, width: 56)
+                    }
+                }
+            }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { metadata }.fixedSize(horizontal: true, vertical: false)
+                HStack(spacing: 10) { metadata }.fixedSize(horizontal: true, vertical: false)
                 VStack(alignment: .leading, spacing: 4) { metadata }
             }
             if matchingVocabularyCount == 0, let libraryExplanation {
@@ -157,14 +205,19 @@ struct ReadingRecommendationCard: View {
                 studyButton
             }
         }
-        .modifier(Panel(fill: Palette.tint))
+        .modifier(Panel(padding: 16))
     }
 
     private var heading: some View {
-        Text(inLibrary ? (matchingVocabularyCount == 0 ? "پیشنهاد برای شروع" : "پیشنهاد برای تو")
-             : "داستان پیشنهادی امروز")
-            .font(HeadingFont.section)
-            .accessibilityAddTraits(.isHeader)
+        HStack(spacing: 6) {
+            Text(inLibrary ? (matchingVocabularyCount == 0 ? "پیشنهاد برای شروع" : "پیشنهاد برای تو")
+                 : "داستان پیشنهادی امروز")
+                .font(HeadingFont.section)
+                .accessibilityAddTraits(.isHeader)
+            if inLibrary && hasCover {
+                ElphyMascotView(mood: .reading, size: 36, animatesAppearance: true)
+            }
+        }
     }
 
     @ViewBuilder private var completionBadge: some View {
@@ -176,7 +229,8 @@ struct ReadingRecommendationCard: View {
     }
 
     private var studyButton: some View {
-        Button(completed ? "مطالعهٔ دوباره" : "شروع مطالعه", action: start).buttonStyle(PrimaryButton())
+        let title = ReadingCardAction(record: record, hasReadingPosition: hasReadingPosition).title
+        return Button(title, action: start).buttonStyle(PrimaryButton())
     }
 
     private func libraryButton(_ action: @escaping () -> Void) -> some View {
@@ -189,14 +243,40 @@ struct ReadingRecommendationCard: View {
 
     @ViewBuilder private var metadata: some View {
         ReadingLevelLabel(level: story.level)
-        if inLibrary {
-            Text("\(fa(story.questions.count)) پرسش • حدود \(fa(story.readingMinutes)) دقیقه")
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Palette.paper, in: Capsule())
+        Text(inLibrary ? "\(fa(story.questions.count)) پرسش • حدود \(fa(story.readingMinutes)) دقیقه"
+             : "حدود \(fa(story.readingMinutes)) دقیقه")
+            .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+        if matchingVocabularyCount > 0 {
+            Text("\(fa(matchingVocabularyCount)) واژهٔ آشنا")
                 .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
         }
-        if !inLibrary || matchingVocabularyCount > 0 {
-            Text("\(fa(matchingVocabularyCount)) واژه از تمرین‌های قبلی")
-                .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+    }
+}
+
+private struct ReadingStoryCover: View {
+    let storyID: String
+    let width: CGFloat
+
+    var body: some View {
+        Group {
+            if let asset = ReadingCover.assetName(for: storyID) {
+                Image(asset)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: "book")
+                    .font(.title2.weight(.medium))
+                    .foregroundStyle(Palette.sage)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Palette.tint)
+            }
         }
+        .frame(width: width, height: width * 3 / 4)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .accessibilityHidden(true)
     }
 }
 
@@ -214,11 +294,14 @@ private struct ReadingLevelLabel: View {
 
 private struct ReadingStoryTitle: View {
     let story: ReadingStory
+    var featured = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(story.titleFa).font(HeadingFont.section)
-            Text(story.titleEn).font(.system(.title3, design: .serif).weight(.semibold))
+        VStack(alignment: .leading, spacing: featured ? 1 : 4) {
+            Text(story.titleFa).font(featured ? HeadingFont.title : HeadingFont.section)
+            Text(story.titleEn)
+                .font(.system(featured ? .body : .title3, design: .serif).weight(.semibold))
+                .foregroundStyle(featured ? Palette.muted : Palette.ink)
                 .readingEnglish()
         }
     }
@@ -229,6 +312,7 @@ private struct ReadingPassageView: View {
     let cards: [String: Card]
     let statuses: [String: VocabularyStatus]
     let hasRead: Bool
+    @Binding var position: Double
     let startQuiz: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -239,10 +323,18 @@ private struct ReadingPassageView: View {
     @State private var savedRead = false
 
     var body: some View {
-        Page {
+        Page(readingPosition: $position) {
             VStack(alignment: .leading, spacing: 8) {
                 ReadingLevelLabel(level: story.level)
                 ReadingStoryTitle(story: story).accessibilityAddTraits(.isHeader)
+            }
+            if let cover = ReadingCover.assetName(for: story.id) {
+                Image(decorative: cover)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .allowsHitTesting(false)
             }
             HStack(spacing: 12) {
                 Button {

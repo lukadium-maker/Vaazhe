@@ -7,6 +7,7 @@ enum Palette {
     static let muted = adaptive(0x625E54, 0xC3BBAD)
     static let card = adaptive(0xEFE7DB, 0x312D26)
     static let border = adaptive(0xDED5C6, 0x524A40)
+    static let goalTrack = adaptive(0xDFE1D7, 0x444B40)
     static let learningProgress = adaptive(0x829477, 0x788F72)
     static let mascotGreen = adaptive(0x254936, 0x88B39A)
     static let celebrationGold = adaptive(0x9A7138, 0xDAB277)
@@ -28,63 +29,91 @@ func fa(_ number: Int) -> String {
     number.formatted(.number.locale(Locale(identifier: "fa_IR")))
 }
 
-struct ElephantMascot: View {
-    enum Mood { case welcoming, happy, encouraging, celebrating, resting }
+struct ElphyMascotView: View {
+    enum Mood: String, CaseIterable {
+        case welcome, studying, thinking, celebrating, encouraging, sleepy, reading, proud
 
-    var mood: Mood = .welcoming
+        var assetName: String { "elphy_" + rawValue }
+
+        var accessibilityLabel: String {
+            switch self {
+            case .welcome: "الفی خوش‌آمد می‌گوید"
+            case .studying: "الفی در حال تمرین واژه‌هاست"
+            case .thinking: "الفی فکر می‌کند"
+            case .celebrating: "الفی جشن می‌گیرد"
+            case .encouraging: "الفی تشویقت می‌کند"
+            case .sleepy: "الفی استراحت می‌کند"
+            case .reading: "الفی کتاب می‌خواند"
+            case .proud: "الفی به پیشرفتت افتخار می‌کند"
+            }
+        }
+    }
+
+    let mood: Mood
+    let size: CGFloat?
+    var animatesAppearance = false
+    var decorative = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var motion = false
+    @State private var appeared = false
 
     var body: some View {
-        Image("ElphyMark")
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .foregroundStyle(mood == .resting ? Palette.sage : Palette.mascotGreen)
-            .rotationEffect(.degrees(motion && mood == .encouraging ? -5 : 0))
-            .offset(y: motion && mood == .happy ? -3 : 0)
-            .scaleEffect(motion && mood == .celebrating ? 1.08 : 1)
-            .task(id: mood) {
-                motion = false
-                guard !reduceMotion, mood != .welcoming, mood != .resting else { return }
-                withAnimation(.easeOut(duration: 0.18)) { motion = true }
-                do {
-                    try await Task.sleep(for: .milliseconds(220))
-                    withAnimation(.easeInOut(duration: 0.26)) { motion = false }
-                } catch {
-                    // The view disappeared or moved to a new mood.
-                }
+        ZStack {
+            Image(mood.assetName)
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .id(mood)
+                .transition(reduceMotion ? .identity : .opacity)
+        }
+        .frame(width: size, height: size)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: mood)
+        .opacity(animatesAppearance && !appeared && !reduceMotion ? 0.76 : 1)
+        .onAppear {
+            guard animatesAppearance, !appeared else { return }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+                appeared = true
             }
-            .accessibilityHidden(true)
+        }
+        .accessibilityLabel(mood.accessibilityLabel)
+        .accessibilityHidden(decorative)
+        .allowsHitTesting(false)
     }
 }
 
 struct Page<Content: View>: View {
+    enum Density { case standard, compact }
+
     private let avoidsFloatingTabBar: Bool
+    private let readingPosition: Binding<Double>?
+    private let density: Density
     let content: Content
     @State private var tabBarOverlap: CGFloat?
-    // Reserve at least one standard tap target for the floating bar and its edge effect.
-    @ScaledMetric(relativeTo: .body) private var minimumTabClearance = 44.0
-
-    init(avoidsFloatingTabBar: Bool = false, @ViewBuilder content: () -> Content) {
+    init(avoidsFloatingTabBar: Bool = false, readingPosition: Binding<Double>? = nil,
+         density: Density = .standard,
+         @ViewBuilder content: () -> Content) {
         self.avoidsFloatingTabBar = avoidsFloatingTabBar
+        self.readingPosition = readingPosition
+        self.density = density
         self.content = content()
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) { content }
+        let scrollView = ScrollView {
+            VStack(alignment: .leading, spacing: density == .compact ? 16 : 22) { content }
                 .frame(maxWidth: 560)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 24)
+                .padding(.horizontal, density == .compact ? 20 : 24)
+                .padding(.vertical, density == .compact ? 16 : 24)
                 .frame(maxWidth: .infinity)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if avoidsFloatingTabBar, #available(iOS 26, *) {
-                Color.clear
-                    .frame(height: max(tabBarOverlap ?? 0, minimumTabClearance))
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+        Group {
+            if let readingPosition {
+                scrollView.modifier(ReadingScrollMemory(position: readingPosition))
+            } else if avoidsFloatingTabBar, #available(iOS 26, *) {
+                // Page padding already leaves breathing room below the final control.
+                // Reserve the additional space inside the scrollable content.
+                scrollView.contentMargins(.bottom, tabBarOverlap ?? 44, for: .scrollContent)
+            } else {
+                scrollView
             }
         }
         .background {
@@ -99,8 +128,35 @@ struct Page<Content: View>: View {
     }
 }
 
+private struct ReadingScrollMemory: ViewModifier {
+    @Binding var position: Double
+    @State private var initialPosition: Double
+    @State private var currentPosition: Double
+
+    init(position: Binding<Double>) {
+        _position = position
+        _initialPosition = State(initialValue: position.wrappedValue)
+        _currentPosition = State(initialValue: position.wrappedValue)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .defaultScrollAnchor(UnitPoint(x: 0.5, y: initialPosition), for: .initialOffset)
+            .onScrollGeometryChange(for: Double.self) { geometry in
+                let extent = geometry.contentSize.height - geometry.containerSize.height
+                    + geometry.contentInsets.top + geometry.contentInsets.bottom
+                guard extent > 0 else { return 0 }
+                let fraction = (geometry.contentOffset.y + geometry.contentInsets.top) / extent
+                return min(1, max(0, Double(fraction) * 100).rounded() / 100)
+            } action: { _, value in
+                currentPosition = value
+            }
+            .onDisappear { position = currentPosition }
+    }
+}
+
 // Measure in the same window coordinate space as the native tab bar. The reader
-// sits outside the scroll inset so its measurement never includes its correction.
+// sits outside the scroll-content margin so the measurement excludes its correction.
 private struct TabBarOverlapReader: UIViewRepresentable {
     let onChange: (CGFloat?) -> Void
 
@@ -167,9 +223,10 @@ private struct TabBarOverlapReader: UIViewRepresentable {
 
 struct Panel: ViewModifier {
     var fill = Palette.card
+    var padding: CGFloat = 20
 
     func body(content: Content) -> some View {
-        content.padding(20)
+        content.padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(fill, in: RoundedRectangle(cornerRadius: 24))
             .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Palette.border))
@@ -185,7 +242,19 @@ struct PrimaryButton: ButtonStyle {
             .padding(12)
             .foregroundStyle(Palette.buttonText)
             .background(Palette.sage, in: RoundedRectangle(cornerRadius: 16))
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .modifier(PressFeedback(pressed: configuration.isPressed))
+    }
+}
+
+struct PressFeedback: ViewModifier {
+    let pressed: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(pressed ? 0.82 : 1)
+            .scaleEffect(pressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: pressed)
     }
 }
 
@@ -257,6 +326,7 @@ struct CardContent: View {
             if revealed {
                 Divider()
                 Text(card.meaningFa).font(PersianFont.meaning)
+                    .transition(.opacity)
                 ForEach(card.alternativeMeaningsFa, id: \.self) { Text($0) }
                 if !card.exampleEn.isEmpty || !card.exampleFa.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -279,10 +349,12 @@ struct CardContent: View {
                             Text(card.exampleFa).foregroundStyle(Palette.muted)
                         }
                     }
+                    .transition(.opacity)
                 }
             } else {
                 Divider()
                 Text("معنی فارسی این واژه را به یاد بیاور.").foregroundStyle(Palette.muted)
+                    .transition(.opacity)
             }
         }
         .modifier(Panel())
