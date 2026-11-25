@@ -2,10 +2,10 @@
   "metadata": {
     "schemaVersion": 1,
     "source": "elfy-vocabulary-export.json",
-    "vocabularyCount": 150,
-    "storyCount": 20,
-    "uniqueTargetWordsCovered": 104,
-    "coveragePercent": 69.3,
+    "vocabularyCount": 300,
+    "storyCount": 30,
+    "uniqueTargetWordsCovered": 164,
+    "coveragePercent": 54.7,
     "notes": "All target word IDs verified against supplied vocabulary. Stories may also contain other vocabulary as supporting language; match counts are targets only. CEFR levels are editorial estimates; review by a language teacher before release."
   },
   "stories": [
@@ -24,6 +24,7 @@
         "meet"
       ],
       "textEn": "Mina has a ticket for the morning train. She leaves home early and walks to the station. Her friend Ali is not there yet, so she must wait. Soon, Ali arrives with two cups of tea. They meet near the big clock. The train is late, but they do not worry. They sit together and talk about their trip.",
+      "textFa": "مینا برای قطار صبح بلیت دارد. او صبح زود از خانه بیرون می‌رود و پیاده به ایستگاه می‌رود. دوستش علی هنوز نیامده است، پس مینا باید منتظر بماند. کمی بعد، علی با دو فنجان چای می‌رسد. آن‌ها کنار ساعت بزرگ همدیگر را می‌بینند. قطار دیر کرده است، اما آن‌ها نگران نیستند. کنار هم می‌نشینند و دربارهٔ سفرشان حرف می‌زنند.",
       "questions": [
         {
           "id": "q1",
@@ -87,6 +88,7 @@
         "together"
       ],
       "textEn": "It is Sunday, and Neda wants to cook breakfast for her father. She puts bread on the table and makes eggs. Her father brings fresh fruit from the kitchen. They drink tea and eat together. Neda asks about his week. He tells her a funny story, and they laugh. They enjoy a quiet morning at home before the day becomes busy.",
+      "textFa": "یکشنبه است و ندا می‌خواهد برای پدرش صبحانه درست کند. او نان را روی میز می‌گذارد و تخم‌مرغ درست می‌کند. پدرش از آشپزخانه میوهٔ تازه می‌آورد. آن‌ها چای می‌نوشند و با هم صبحانه می‌خورند. ندا از پدرش می‌پرسد هفته‌اش چطور گذشته است. پدرش داستان خنده‌داری برایش تعریف می‌کند و هر دو می‌خندند. پیش از آنکه روزشان شلوغ شود، از صبح آرامشان در خانه لذت می‌برند.",
       "questions": [
         {
           "id": "q1",
@@ -149,6 +151,7 @@
         "need"
       ],
       "textEn": "Farid is ready to leave, but he cannot find his bag. He opens the bedroom door and looks under the bed. He checks the kitchen, too. His sister offers to help. “Try to remember where you sat last night,” she says. Farid goes to the sofa and sees his bag behind it. He closes the door and smiles. Now he only needs to find his shoes.",
+      "textFa": "فرید آمادهٔ رفتن است، اما کیفش را پیدا نمی‌کند. در اتاق‌خواب را باز می‌کند و زیر تخت را نگاه می‌کند. آشپزخانه را هم می‌گردد. خواهرش می‌گوید که می‌تواند کمکش کند. او می‌گوید: «سعی کن یادت بیاید دیشب کجا نشسته بودی.» فرید به سمت مبل می‌رود و کیفش را پشت آن می‌بیند. در را می‌بندد و لبخند می‌زند. حالا فقط باید کفش‌هایش را پیدا کند.",
       "questions": [
         {
           "id": "q1",
@@ -210,6 +213,7 @@
         "repeat"
       ],
       "textEn": "Sara visits a small bookshop because she wants to learn English. She needs a dictionary, but there are many different books. She asks the shopkeeper a question about beginner dictionaries. He shows her a simple one with pictures. Sara tries to spell a new word and asks him to repeat its sound. She decides to choose the small dictionary and begins studying that evening.",
+      "textFa": "سارا به یک کتاب‌فروشی کوچک می‌رود، چون می‌خواهد انگلیسی یاد بگیرد. او به یک فرهنگ لغت نیاز دارد، اما کتاب‌های زیادی آنجا هست. از کتاب‌فروش دربارهٔ فرهنگ‌های لغت مخصوص مبتدی‌ها سؤال می‌کند. کتاب‌فروش یک فرهنگ لغت ساده و تصویری به او نشان می‌دهد. سارا سعی می‌کند واژهٔ تازه‌ای را هجی کند و از کتاب‌فروش می‌خواهد تلفظ آن را تکرار کند. سارا تصمیم می‌گیرد فرهنگ لغت کوچک را انتخاب کند و همان شب شروع به مطالعه می‌کند.",
       "questions": [
         {
           "id": "q1",
@@ -271,6 +275,7 @@
         "careful"
       ],
       "textEn": "An older customer enters a clothing shop and asks for a warm jacket. The worker shows her three colors. She cannot choose, so he asks what she likes. She picks the blue jacket and checks the price. It costs less than she expected. The worker is careful when he packs it. She thanks him for his help and pays with her card.",
+      "textFa": "خانمی مسن وارد یک فروشگاه لباس می‌شود و کاپشن گرمی می‌خواهد. فروشنده سه رنگ به او نشان می‌دهد. خانم نمی‌تواند انتخاب کند، پس فروشنده می‌پرسد چه رنگی دوست دارد. خانم کاپشن آبی را انتخاب می‌کند و قیمتش را می‌بیند. قیمت از چیزی که انتظار داشت کمتر است. فروشنده با دقت کاپشن را بسته‌بندی می‌کند. خانم از او بابت کمکش تشکر می‌کند و با کارت بانکی پرداخت می‌کند.",
       "questions": [
         {
           "id": "q1",
@@ -333,6 +338,7 @@
         "airline"
       ],
       "textEn": "Navid has a flight to Rome. He plans to arrive at the airport early, but there is heavy traffic on the road. When he finally reaches the airport, he cannot find his passport. He looks in his coat and then in his small bag. There it is! The airline worker checks his ticket. Navid has enough time to board, and his trip can begin.",
+      "textFa": "نوید به رم پرواز دارد. قصد دارد زود به فرودگاه برسد، اما ترافیک جاده سنگین است. وقتی بالاخره به فرودگاه می‌رسد، گذرنامه‌اش را پیدا نمی‌کند. اول جیب‌های کتش را می‌گردد و بعد داخل کیف کوچکش را نگاه می‌کند. پیدایش کرد! کارمند شرکت هواپیمایی بلیت نوید را بررسی می‌کند. نوید هنوز وقت دارد سوار هواپیما شود و سفرش می‌تواند شروع شود.",
       "questions": [
         {
           "id": "q1",
@@ -395,6 +401,7 @@
         "taste"
       ],
       "textEn": "Mahsa goes to her usual café after work. It is quiet today, and only two people are sitting inside. She usually orders coffee, but this afternoon she wants to try something different. The waiter suggests a warm apple drink. Mahsa prefers tea, yet she decides to try his suggestion. He serves the drink with a small cake. She likes the taste and decides to order it again next week.",
+      "textFa": "مهسا بعد از کار به کافه‌ای می‌رود که همیشه به آنجا سر می‌زند. امروز کافه خلوت است و فقط دو نفر داخل آن نشسته‌اند. مهسا معمولاً قهوه سفارش می‌دهد، اما امروز بعدازظهر دلش می‌خواهد چیز دیگری امتحان کند. پیشخدمت یک نوشیدنی گرم سیب پیشنهاد می‌دهد. مهسا چای را ترجیح می‌دهد، با این حال تصمیم می‌گیرد پیشنهاد او را امتحان کند. پیشخدمت نوشیدنی را همراه یک کیک کوچک می‌آورد. مهسا طعم آن را دوست دارد و تصمیم می‌گیرد هفتهٔ بعد دوباره آن را سفارش دهد.",
       "questions": [
         {
           "id": "q1",
@@ -456,6 +463,7 @@
         "return"
       ],
       "textEn": "Reza has to carry a heavy table up the stairs, but he lives alone. His neighbor Parisa sees him and offers to help. They lift the table together. Later, Reza asks if he can borrow a screwdriver. Parisa is kind and agrees to lend him one. Reza fixes the table leg and promises to return the tool before dinner. He leaves a thank-you note at her door.",
+      "textFa": "رضا باید یک میز سنگین را از پله‌ها بالا ببرد، اما تنها زندگی می‌کند. همسایه‌اش پریسا او را می‌بیند و پیشنهاد می‌دهد کمکش کند. آن‌ها با هم میز را بلند می‌کنند. بعدتر، رضا از پریسا می‌پرسد که می‌تواند یک پیچ‌گوشتی از او قرض بگیرد یا نه. پریسا مهربان است و قبول می‌کند یک پیچ‌گوشتی به او قرض بدهد. رضا پایهٔ میز را تعمیر می‌کند و قول می‌دهد ابزار را پیش از شام پس بدهد. او یادداشت تشکری جلوی در خانهٔ پریسا می‌گذارد.",
       "questions": [
         {
           "id": "q1",
@@ -518,6 +526,7 @@
         "prepare"
       ],
       "textEn": "On Friday, three friends have a plan to go to the beach. In the morning, the weather changes and dark clouds cover the sky. They decide to cancel the trip. Perhaps they can visit the beach next weekend. Instead, Mina invites everyone to her apartment. She prepares a simple lunch, and the others bring games. The day is different from their first plan, but it is still fun.",
+      "textFa": "روز جمعه، سه دوست برنامه دارند به ساحل بروند. صبح هوا عوض می‌شود و ابرهای تیره آسمان را می‌پوشانند. آن‌ها تصمیم می‌گیرند سفر را لغو کنند. شاید بتوانند آخر هفتهٔ بعد به ساحل بروند. در عوض، مینا همه را به آپارتمانش دعوت می‌کند. او ناهار ساده‌ای آماده می‌کند و بقیه با خودشان بازی می‌آورند. روزشان با برنامهٔ اول فرق دارد، اما باز هم به آن‌ها خوش می‌گذرد.",
       "questions": [
         {
           "id": "q1",
@@ -579,6 +588,7 @@
         "improve"
       ],
       "textEn": "Leyla is new at her office. She must complete a form before lunch. She works quickly but makes a mistake in an address. Her manager asks her to check the details again. At first, Leyla feels nervous. Then her manager gives a clear explanation and shows her the correct way. Leyla fixes the form. She knows that small mistakes can help her improve when she learns from them.",
+      "textFa": "لیلا تازه در دفتر کارش مشغول به کار شده است. او باید پیش از ناهار فرمی را پر کند. سریع کار می‌کند، اما در نوشتن یکی از نشانی‌ها اشتباه می‌کند. مدیرش از او می‌خواهد جزئیات را دوباره بررسی کند. لیلا ابتدا مضطرب می‌شود. بعد، مدیرش موضوع را روشن توضیح می‌دهد و روش درست را به او نشان می‌دهد. لیلا فرم را اصلاح می‌کند. او می‌داند اگر از اشتباه‌های کوچک درس بگیرد، می‌تواند پیشرفت کند.",
       "questions": [
         {
           "id": "q1",
@@ -638,6 +648,7 @@
         "almost"
       ],
       "textEn": "An old bus is almost full when Darya gets on. She looks for a comfortable seat, but the only empty one is beside a window that will not close. She sits down anyway. At the next stop, a passenger leaves, and another seat becomes available. Darya moves there. The new seat is warm, and she can enjoy the rest of her journey.",
+      "textFa": "وقتی دریا سوار می‌شود، اتوبوس قدیمی تقریباً پر است. او دنبال صندلی راحتی می‌گردد، اما تنها صندلی خالی کنار پنجره‌ای است که بسته نمی‌شود. با این حال، همان‌جا می‌نشیند. در ایستگاه بعدی، مسافری پیاده می‌شود و صندلی دیگری خالی می‌شود. دریا به آن صندلی می‌رود. جای جدید گرم است و او می‌تواند از بقیهٔ مسیر لذت ببرد.",
       "questions": [
         {
           "id": "q1",
@@ -698,6 +709,7 @@
         "follow"
       ],
       "textEn": "Omid wants to ride his bicycle, but a small part of it breaks. He takes it to a local repair shop. The mechanic checks the bicycle and explains that a new part is necessary. Omid does not have enough money today. The mechanic suggests a cheaper repair for now. He tells Omid to be careful and to follow his advice until the new part arrives.",
+      "textFa": "امید می‌خواهد دوچرخه‌سواری کند، اما قطعهٔ کوچکی از دوچرخه‌اش می‌شکند. دوچرخه را به تعمیرگاهی در محله می‌برد. تعمیرکار دوچرخه را بررسی می‌کند و توضیح می‌دهد که یک قطعهٔ جدید لازم است. امید امروز پول کافی ندارد. تعمیرکار پیشنهاد می‌دهد فعلاً تعمیر ارزان‌تری انجام دهد. به امید می‌گوید مراقب باشد و تا رسیدن قطعهٔ جدید به توصیه‌اش عمل کند.",
       "questions": [
         {
           "id": "q1",
@@ -759,6 +771,7 @@
         "conversation"
       ],
       "textEn": "Farhad invites two neighbors to dinner. They accept and ask if they should bring anything. Farhad says that he will prepare the main meal. One neighbor brings fresh bread, and the other makes a salad. They share the food at a small table and enjoy a long conversation. By the end of the evening, the neighbors know one another much better.",
+      "textFa": "فرهاد دو نفر از همسایه‌ها را به شام دعوت می‌کند. آن‌ها دعوت را می‌پذیرند و می‌پرسند لازم است چیزی بیاورند یا نه. فرهاد می‌گوید غذای اصلی را خودش آماده می‌کند. یکی از همسایه‌ها نان تازه می‌آورد و دیگری سالاد درست می‌کند. دور یک میز کوچک با هم غذا می‌خورند و از گفت‌وگویی طولانی لذت می‌برند. تا پایان شب، همسایه‌ها یکدیگر را خیلی بهتر می‌شناسند.",
       "questions": [
         {
           "id": "q1",
@@ -820,6 +833,7 @@
         "advantage"
       ],
       "textEn": "Two friends want to walk to the lake. Their usual route goes through the town, but today they discover a different path on the map. The new route is longer, so they compare the distance. It has one big advantage: most of the path is in the shade. They follow the signs in the right direction. After an hour, they reach the lake and sit beneath a tree.",
+      "textFa": "دو دوست می‌خواهند پیاده به دریاچه بروند. مسیر همیشگی‌شان از داخل شهر می‌گذرد، اما امروز روی نقشه راه دیگری پیدا می‌کنند. مسیر جدید طولانی‌تر است، پس فاصلهٔ دو مسیر را با هم مقایسه می‌کنند. مسیر جدید یک مزیت بزرگ دارد: بیشتر راه در سایه است. آن‌ها تابلوها را دنبال می‌کنند و در مسیر درست پیش می‌روند. بعد از یک ساعت، به دریاچه می‌رسند و زیر درختی می‌نشینند.",
       "questions": [
         {
           "id": "q1",
@@ -881,6 +895,7 @@
         "available"
       ],
       "textEn": "Yasmin receives an email about a new job opportunity. She notices that the interview is scheduled for Thursday, but she already has an appointment. She does not want to lose the opportunity, so she considers her options. She writes a polite message to ask if Friday is available. The company responds the next morning and agrees to change the time. Yasmin feels relieved and begins to prepare.",
+      "textFa": "یاسمین ایمیلی دربارهٔ یک فرصت شغلی تازه دریافت می‌کند. متوجه می‌شود مصاحبه برای پنج‌شنبه تعیین شده است، اما از قبل برای آن روز قراری دارد. نمی‌خواهد این فرصت را از دست بدهد، پس گزینه‌هایش را بررسی می‌کند. در پیامی مؤدبانه می‌پرسد که آیا می‌شود مصاحبه را جمعه برگزار کرد. شرکت صبح روز بعد پاسخ می‌دهد و با تغییر زمان موافقت می‌کند. خیال یاسمین راحت می‌شود و شروع به آماده شدن می‌کند.",
       "questions": [
         {
           "id": "q1",
@@ -942,6 +957,7 @@
         "improve"
       ],
       "textEn": "When Arman begins learning English, he is afraid to speak in class. His teacher explains that progress takes effort. Each week, Arman practices a short conversation with a classmate. His classmates support him when he makes mistakes. After three months, he feels more confident. He has not achieved perfect English, but his experience shows that regular practice can improve his speaking.",
+      "textFa": "وقتی آرمان یادگیری انگلیسی را شروع می‌کند، از صحبت کردن در کلاس می‌ترسد. معلمش توضیح می‌دهد که پیشرفت به تلاش نیاز دارد. آرمان هر هفته با یکی از هم‌کلاسی‌هایش یک گفت‌وگوی کوتاه تمرین می‌کند. وقتی اشتباه می‌کند، هم‌کلاسی‌هایش از او حمایت می‌کنند. بعد از سه ماه، اعتمادبه‌نفس بیشتری دارد. هنوز انگلیسی را بی‌نقص صحبت نمی‌کند، اما تجربه‌اش نشان می‌دهد که تمرین منظم می‌تواند مهارت صحبت کردنش را بهتر کند.",
       "questions": [
         {
           "id": "q1",
@@ -1002,6 +1018,7 @@
         "valuable"
       ],
       "textEn": "When Sara moves into a new apartment, she asks her friend Mona for help. Mona is reliable: if she promises something, she does it. Sara expects moving day to be difficult, but Mona knows how to handle problems calmly. They manage to carry all the boxes upstairs before dark. Sara thanks Mona and says that having a trustworthy friend is more valuable than an expensive gift.",
+      "textFa": "وقتی سارا به آپارتمان جدیدی اسباب‌کشی می‌کند، از دوستش مونا کمک می‌خواهد. مونا قابل اعتماد است: اگر قول بدهد کاری را انجام دهد، آن را انجام می‌دهد. سارا انتظار دارد روز اسباب‌کشی سخت باشد، اما مونا بلد است با آرامش از پس مشکلات برآید. آن‌ها موفق می‌شوند قبل از تاریک شدن هوا همهٔ جعبه‌ها را از پله‌ها بالا ببرند. سارا از مونا تشکر می‌کند و می‌گوید داشتن دوستی قابل اعتماد از یک هدیهٔ گران‌قیمت ارزشمندتر است.",
       "questions": [
         {
           "id": "q1",
@@ -1062,6 +1079,7 @@
         "together"
       ],
       "textEn": "Every Saturday, people in a small neighborhood work in a local garden. They collect dry leaves and plant vegetables. Today, a new family wants to join them. The group welcomes the family and explains the simple rules. The work includes watering the plants and cleaning the paths. At noon, everyone eats fresh bread and tomatoes together. The new family plans to return next week.",
+      "textFa": "هر شنبه، اهالی یک محلهٔ کوچک در باغ محله کار می‌کنند. آن‌ها برگ‌های خشک را جمع می‌کنند و سبزیجات می‌کارند. امروز خانواده‌ای تازه می‌خواهد به آن‌ها بپیوندد. گروه به خانواده خوشامد می‌گوید و قوانین سادهٔ باغ را توضیح می‌دهد. کارهای باغ شامل آبیاری گیاهان و تمیز کردن مسیرهاست. ظهر، همه با هم نان تازه و گوجه‌فرنگی می‌خورند. خانوادهٔ تازه تصمیم دارد هفتهٔ بعد برگردد.",
       "questions": [
         {
           "id": "q1",
@@ -1121,6 +1139,7 @@
         "return"
       ],
       "textEn": "A delivery worker brings a package to Hamed’s apartment. Hamed receives it but notices that the name on the box is different. He checks the address and sees that the package belongs to another building. He calls the shop to describe the mistake. The worker returns later and collects the box. The next day, Hamed receives his own package. He is glad he did not open the wrong one.",
+      "textFa": "یک مأمور تحویل بسته‌ای به آپارتمان حامد می‌آورد. حامد بسته را تحویل می‌گیرد، اما متوجه می‌شود نام روی جعبه با نام او فرق دارد. نشانی را بررسی می‌کند و می‌بیند بسته متعلق به ساختمان دیگری است. به فروشگاه زنگ می‌زند و اشتباه را توضیح می‌دهد. مأمور تحویل بعداً برمی‌گردد و جعبه را می‌برد. روز بعد، حامد بستهٔ خودش را تحویل می‌گیرد. خوشحال است که بستهٔ اشتباهی را باز نکرده است.",
       "questions": [
         {
           "id": "q1",
@@ -1179,6 +1198,7 @@
         "tend"
       ],
       "textEn": "Leila tends to stay up late and look at her phone in bed. In the morning, she is often tired. Her doctor explains that sleep habits can influence how people feel during the day. She recommends a simple change: put the phone away an hour before bedtime. Leila tries this habit for two weeks. It does not prevent every bad night, but she starts to feel better in the mornings.",
+      "textFa": "لیلا معمولاً تا دیروقت بیدار می‌ماند و در تخت به گوشی‌اش نگاه می‌کند. صبح‌ها اغلب خسته است. پزشکش توضیح می‌دهد که عادت‌های خواب می‌توانند روی حال آدم‌ها در طول روز تأثیر بگذارند. او تغییر ساده‌ای پیشنهاد می‌کند: یک ساعت قبل از خواب گوشی را کنار بگذار. لیلا این عادت را دو هفته امتحان می‌کند. هنوز بعضی شب‌ها خوب نمی‌خوابد، اما کم‌کم صبح‌ها حال بهتری دارد.",
       "questions": [
         {
           "id": "q1",
@@ -1223,6 +1243,626 @@
         "en-prevent-verb",
         "en-recommend-verb",
         "en-tend-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-21",
+      "titleEn": "The Baby’s First Visit",
+      "titleFa": "اولین دیدار با نوزاد",
+      "level": "A2",
+      "targetWords": [
+        "baby",
+        "show",
+        "ask",
+        "mother",
+        "room",
+        "hold"
+      ],
+      "textEn": "Mina visits her sister and meets her new baby. The baby is asleep, so they wait in the next room. Soon the baby opens her eyes. Her mother asks Mina, “Would you like to hold her?” Mina says yes. She sits down, and her sister shows her how to hold the baby.",
+      "textFa": "مینا به دیدن خواهرش می‌رود و برای اولین بار نوزاد او را می‌بیند. نوزاد خواب است، پس آن‌ها در اتاق کناری منتظر می‌مانند. کمی بعد، نوزاد چشم‌هایش را باز می‌کند. مادر نوزاد از مینا می‌پرسد: «دوست داری بغلش کنی؟» مینا می‌گوید بله. او می‌نشیند و خواهرش به او نشان می‌دهد چطور نوزاد را بغل کند.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why do they wait in the next room?",
+          "optionsEn": [
+            "The baby is asleep.",
+            "The room is cold.",
+            "Mina is tired.",
+            "The baby is hungry."
+          ],
+          "correctIndex": 0,
+          "explanationFa": "آن‌ها منتظر می‌مانند چون نوزاد خواب است."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What does the mother ask Mina?",
+          "optionsEn": [
+            "Can you open the door?",
+            "Would you like to hold the baby?",
+            "Would you like some tea?",
+            "Can you find a chair?"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "مادر نوزاد می‌پرسد آیا مینا دوست دارد او را بغل کند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Mina do before she holds the baby?",
+          "optionsEn": [
+            "She leaves the house.",
+            "She opens a window.",
+            "She sits down.",
+            "She makes a phone call."
+          ],
+          "correctIndex": 2,
+          "explanationFa": "مینا اول می‌نشیند."
+        }
+      ],
+      "targetWordIds": [
+        "en-baby-noun",
+        "en-show-verb",
+        "en-ask-verb",
+        "en-mother-noun",
+        "en-room-noun",
+        "en-hold-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-22",
+      "titleEn": "Ready for the Move",
+      "titleFa": "آمادهٔ اسباب‌کشی",
+      "level": "A2",
+      "targetWords": [
+        "friend",
+        "move",
+        "ready",
+        "minute",
+        "family",
+        "tomorrow"
+      ],
+      "textEn": "Reza’s family will move to a new home tomorrow. His friend Ali comes to help with the boxes. Reza says, “Wait a minute. This box is still open.” He puts his last book inside and closes the box. Then he looks around the room and says, “Now we’re ready.”",
+      "textFa": "خانوادهٔ رضا فردا به خانهٔ تازه‌ای اسباب‌کشی می‌کنند. دوستش علی می‌آید تا در جمع کردن جعبه‌ها کمک کند. رضا می‌گوید: «یک دقیقه صبر کن. این جعبه هنوز باز است.» آخرین کتابش را داخل جعبه می‌گذارد و آن را می‌بندد. بعد به دور اتاق نگاه می‌کند و می‌گوید: «حالا آماده‌ایم.»",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "When will Reza’s family move?",
+          "optionsEn": [
+            "Today",
+            "Next week",
+            "Tomorrow",
+            "In a month"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "آن‌ها فردا اسباب‌کشی می‌کنند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Why does Ali come?",
+          "optionsEn": [
+            "To bring lunch",
+            "To find his keys",
+            "To see the garden",
+            "To help with the boxes"
+          ],
+          "correctIndex": 3,
+          "explanationFa": "علی می‌آید تا در جمع کردن جعبه‌ها کمک کند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Reza put in the open box?",
+          "optionsEn": [
+            "His last book",
+            "His phone",
+            "His shoes",
+            "A bag of food"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "رضا آخرین کتابش را داخل جعبه می‌گذارد."
+        }
+      ],
+      "targetWordIds": [
+        "en-friend-noun",
+        "en-move-verb",
+        "en-ready-adjective",
+        "en-minute-noun",
+        "en-family-noun",
+        "en-tomorrow-adverb"
+      ]
+    },
+    {
+      "id": "elfy-reading-23",
+      "titleEn": "A Game After School",
+      "titleFa": "بازی بعد از مدرسه",
+      "level": "A2",
+      "targetWords": [
+        "happy",
+        "school",
+        "watch",
+        "sit",
+        "worry",
+        "brother"
+      ],
+      "textEn": "After school, Neda goes to watch her brother play football. She sits next to her father. Her brother misses his first shot and starts to worry. A few minutes later, he tries again and scores. Neda stands up and smiles. On the way home, her brother says he’s happy he tried again.",
+      "textFa": "بعد از مدرسه، ندا می‌رود تا فوتبال بازی کردن برادرش را تماشا کند. او کنار پدرش می‌نشیند. برادرش اولین ضربه‌اش را از دست می‌دهد و نگران می‌شود. چند دقیقه بعد دوباره تلاش می‌کند و گل می‌زند. ندا بلند می‌شود و لبخند می‌زند. در راه خانه، برادرش می‌گوید خوشحال است که دوباره تلاش کرد.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Who plays football?",
+          "optionsEn": [
+            "Neda’s father",
+            "Neda’s brother",
+            "Neda",
+            "Neda’s friend"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "برادر ندا فوتبال بازی می‌کند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Where does Neda sit?",
+          "optionsEn": [
+            "Next to her father",
+            "Next to her brother",
+            "Next to her teacher",
+            "Next to her friend"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "ندا کنار پدرش می‌نشیند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What happens when her brother tries again?",
+          "optionsEn": [
+            "He goes home.",
+            "He falls down.",
+            "He misses again.",
+            "He scores."
+          ],
+          "correctIndex": 3,
+          "explanationFa": "برادرش در تلاش بعدی گل می‌زند."
+        }
+      ],
+      "targetWordIds": [
+        "en-happy-adjective",
+        "en-school-noun",
+        "en-watch-verb",
+        "en-sit-verb",
+        "en-worry-verb",
+        "en-brother-noun"
+      ]
+    },
+    {
+      "id": "elfy-reading-24",
+      "titleEn": "A Call to the Doctor",
+      "titleFa": "تماس با پزشک",
+      "level": "A2",
+      "targetWords": [
+        "phone",
+        "doctor",
+        "soon",
+        "town",
+        "young",
+        "read"
+      ],
+      "textEn": "A young man feels ill while visiting a small town. He stops to read a sign outside a clinic. It has the name of a doctor. He takes out his phone and calls. The doctor can see him soon. The man sits outside in the shade and waits for his appointment.",
+      "textFa": "مرد جوانی هنگام دیدن از یک شهر کوچک حالش بد می‌شود. جلوی یک درمانگاه می‌ایستد تا تابلویی را بخواند. نام یک پزشک روی تابلو نوشته شده است. تلفنش را درمی‌آورد و تماس می‌گیرد. پزشک به‌زودی می‌تواند او را ببیند. مرد در سایهٔ بیرون می‌نشیند و منتظر نوبتش می‌ماند.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "How does the man feel?",
+          "optionsEn": [
+            "Hungry",
+            "Happy",
+            "Ill",
+            "Angry"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "مرد احساس بیماری می‌کند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Where does he find the doctor’s name?",
+          "optionsEn": [
+            "On a sign outside a clinic",
+            "In his notebook",
+            "On a bus ticket",
+            "In a message from a friend"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "نام پزشک روی تابلوی جلوی درمانگاه است."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Where does he wait?",
+          "optionsEn": [
+            "Inside his car",
+            "In the shade outside",
+            "At home",
+            "On a bus"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "او بیرون، در سایه منتظر می‌ماند."
+        }
+      ],
+      "targetWordIds": [
+        "en-phone-noun",
+        "en-doctor-noun",
+        "en-soon-adverb",
+        "en-town-noun",
+        "en-young-adjective",
+        "en-read-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-25",
+      "titleEn": "Lunch at the Office",
+      "titleFa": "ناهار در دفتر کار",
+      "level": "A2",
+      "targetWords": [
+        "walk",
+        "office",
+        "pick",
+        "hot",
+        "speak",
+        "sister"
+      ],
+      "textEn": "Leila walks to her sister’s office at noon. They want to have lunch together. Her sister picks a café across the street. It’s hot outside, so they sit near an open window. They speak about their week while they wait for their food.",
+      "textFa": "لیلا ظهر پیاده به دفتر کار خواهرش می‌رود. می‌خواهند با هم ناهار بخورند. خواهرش کافه‌ای آن طرف خیابان انتخاب می‌کند. بیرون گرم است، پس نزدیک پنجره‌ای باز می‌نشینند. در حالی که منتظر غذایشان هستند، دربارهٔ هفته‌ای که گذرانده‌اند صحبت می‌کنند.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Why does Leila go to her sister’s office?",
+          "optionsEn": [
+            "To help her work",
+            "To borrow a book",
+            "To bring her a phone",
+            "To have lunch with her"
+          ],
+          "correctIndex": 3,
+          "explanationFa": "لیلا می‌رود تا با خواهرش ناهار بخورد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Where is the café?",
+          "optionsEn": [
+            "Across the street",
+            "Inside the office",
+            "Next to their house",
+            "In another town"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "کافه آن طرف خیابان است."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Why do they sit near the window?",
+          "optionsEn": [
+            "They want to see a friend.",
+            "It is hot outside.",
+            "The café is closing.",
+            "The food is already there."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "چون بیرون گرم است، کنار پنجرهٔ باز می‌نشینند."
+        }
+      ],
+      "targetWordIds": [
+        "en-walk-verb",
+        "en-office-noun",
+        "en-pick-verb",
+        "en-hot-adjective",
+        "en-speak-verb",
+        "en-sister-noun"
+      ]
+    },
+    {
+      "id": "elfy-reading-26",
+      "titleEn": "The Book About the City",
+      "titleFa": "کتابی دربارهٔ شهر",
+      "level": "A2",
+      "targetWords": [
+        "book",
+        "answer",
+        "daughter",
+        "city",
+        "hour",
+        "drive"
+      ],
+      "textEn": "Amir and his daughter drive to the library. She has a question for school about the city where they live. They find a book about the city and spend an hour looking through it. At last, she finds the answer on a page with an old map.",
+      "textFa": "امیر و دخترش با ماشین به کتابخانه می‌روند. دخترش برای مدرسه سؤالی دربارهٔ شهری دارد که در آن زندگی می‌کنند. آن‌ها کتابی دربارهٔ شهر پیدا می‌کنند و یک ساعت آن را ورق می‌زنند. سرانجام، دختر جواب را در صفحه‌ای پیدا می‌کند که نقشه‌ای قدیمی دارد.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "How do Amir and his daughter go to the library?",
+          "optionsEn": [
+            "By bus",
+            "On foot",
+            "By car",
+            "By train"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "آن‌ها با ماشین به کتابخانه می‌روند."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What is the school question about?",
+          "optionsEn": [
+            "A family trip",
+            "Their city",
+            "A football game",
+            "Her teacher"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "سؤال دربارهٔ شهری است که در آن زندگی می‌کنند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What else is on the page with the answer?",
+          "optionsEn": [
+            "A picture of a teacher",
+            "A phone number",
+            "A short poem",
+            "An old map"
+          ],
+          "correctIndex": 3,
+          "explanationFa": "در همان صفحه نقشه‌ای قدیمی هم هست."
+        }
+      ],
+      "targetWordIds": [
+        "en-book-noun",
+        "en-answer-noun",
+        "en-daughter-noun",
+        "en-city-noun",
+        "en-hour-noun",
+        "en-drive-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-27",
+      "titleEn": "The Team’s New Rule",
+      "titleFa": "قانون تازهٔ تیم",
+      "level": "A2",
+      "targetWords": [
+        "promise",
+        "street",
+        "team",
+        "catch",
+        "drop",
+        "throw"
+      ],
+      "textEn": "A small team plays with a ball near the street. One player throws it to Roya, but she drops it. The ball rolls into the street. The team agrees to move farther from the road. They promise to wait until the next player is ready before they throw the ball again. This time, Roya catches it.",
+      "textFa": "یک تیم کوچک نزدیک خیابان با توپ بازی می‌کند. یکی از بازیکنان توپ را به طرف رؤیا پرتاب می‌کند، اما توپ از دست رؤیا می‌افتد و غلت‌زنان وارد خیابان می‌شود. اعضای تیم توافق می‌کنند از خیابان دورتر شوند. قول می‌دهند قبل از پرتاب دوبارهٔ توپ صبر کنند تا بازیکن بعدی آماده باشد. این بار رؤیا توپ را می‌گیرد.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Where does the ball go when Roya drops it?",
+          "optionsEn": [
+            "Into the street",
+            "Into a shop",
+            "Under a chair",
+            "Over a wall"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "توپ غلت‌زنان وارد خیابان می‌شود."
+        },
+        {
+          "id": "q2",
+          "promptEn": "What do the players promise to wait for?",
+          "optionsEn": [
+            "For the street lights to turn on",
+            "For a new ball",
+            "For the next player to be ready",
+            "For another team to arrive"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "قول می‌دهند صبر کنند تا بازیکن بعدی آماده باشد."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does Roya do the next time?",
+          "optionsEn": [
+            "She goes home.",
+            "She loses the ball.",
+            "She stops playing.",
+            "She catches the ball."
+          ],
+          "correctIndex": 3,
+          "explanationFa": "رؤیا این بار توپ را می‌گیرد."
+        }
+      ],
+      "targetWordIds": [
+        "en-promise-verb",
+        "en-street-noun",
+        "en-team-noun",
+        "en-catch-verb",
+        "en-drop-verb",
+        "en-throw-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-28",
+      "titleEn": "The Key on the Floor",
+      "titleFa": "کلید روی زمین",
+      "level": "A2",
+      "targetWords": [
+        "wonder",
+        "table",
+        "hotel",
+        "floor",
+        "key",
+        "fall"
+      ],
+      "textEn": "At a hotel, Sara puts her key on a small table. Later, she comes back and starts to wonder where it is. She looks under a chair and sees the key on the floor. It must have fallen off the table. She picks it up and puts it in her bag.",
+      "textFa": "سارا در هتل کلیدش را روی میز کوچکی می‌گذارد. بعداً برمی‌گردد و از خودش می‌پرسد کلید کجاست. زیر صندلی را نگاه می‌کند و کلید را روی زمین می‌بیند. حتماً از روی میز افتاده است. آن را برمی‌دارد و داخل کیفش می‌گذارد.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Where does Sara put the key at first?",
+          "optionsEn": [
+            "In her bag",
+            "On a small table",
+            "On a bed",
+            "By the door"
+          ],
+          "correctIndex": 1,
+          "explanationFa": "سارا ابتدا کلید را روی میز کوچکی می‌گذارد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Where does she find it?",
+          "optionsEn": [
+            "On the floor under a chair",
+            "At the hotel desk",
+            "In her pocket",
+            "Outside the hotel"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "کلید را روی زمین، زیر صندلی پیدا می‌کند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Where does she put it after she finds it?",
+          "optionsEn": [
+            "On the table",
+            "In a drawer",
+            "In her bag",
+            "Beside the door"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "بعد از پیدا کردن کلید، آن را در کیفش می‌گذارد."
+        }
+      ],
+      "targetWordIds": [
+        "en-wonder-verb",
+        "en-table-noun",
+        "en-hotel-noun",
+        "en-floor-noun",
+        "en-key-noun",
+        "en-fall-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-29",
+      "titleEn": "The Card at the Store",
+      "titleFa": "کارت در فروشگاه",
+      "level": "A2",
+      "targetWords": [
+        "card",
+        "bank",
+        "store",
+        "realize",
+        "bus",
+        "push"
+      ],
+      "textEn": "On the bus home, Hamed begins to realize his bank card is missing. He remembers using it at the store. He gets off at the next stop and walks back. He pushes open the store door and asks about the card. The cashier holds it up and says, “You left it beside the machine.”",
+      "textFa": "حامد در اتوبوس، در راه خانه، متوجه می‌شود کارت بانکی‌اش را ندارد. یادش می‌آید که در فروشگاه از کارت استفاده کرده است. در ایستگاه بعدی پیاده می‌شود و پیاده برمی‌گردد. در فروشگاه را هل می‌دهد و باز می‌کند و دربارهٔ کارتش می‌پرسد. صندوق‌دار کارت را بالا می‌گیرد و می‌گوید: «آن را کنار دستگاه جا گذاشتی.»",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "Where is Hamed when he notices that his card is missing?",
+          "optionsEn": [
+            "At home",
+            "At the bank",
+            "In the store",
+            "On the bus"
+          ],
+          "correctIndex": 3,
+          "explanationFa": "حامد در اتوبوس متوجه می‌شود کارتش را ندارد."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Why does he go back to the store?",
+          "optionsEn": [
+            "He needs to buy food.",
+            "He remembers using his card there.",
+            "He wants to meet a friend.",
+            "He left his phone there."
+          ],
+          "correctIndex": 1,
+          "explanationFa": "یادش می‌آید که در فروشگاه از کارت استفاده کرده است."
+        },
+        {
+          "id": "q3",
+          "promptEn": "Where did he leave his card?",
+          "optionsEn": [
+            "Beside the machine",
+            "On the bus seat",
+            "Outside the store",
+            "In his bag"
+          ],
+          "correctIndex": 0,
+          "explanationFa": "کارت را کنار دستگاه جا گذاشته بود."
+        }
+      ],
+      "targetWordIds": [
+        "en-card-noun",
+        "en-bank-noun",
+        "en-store-noun",
+        "en-realize-verb",
+        "en-bus-noun",
+        "en-push-verb"
+      ]
+    },
+    {
+      "id": "elfy-reading-30",
+      "titleEn": "A Guest in Class",
+      "titleFa": "مهمانی در کلاس",
+      "level": "A2",
+      "targetWords": [
+        "laugh",
+        "teacher",
+        "cousin",
+        "nurse",
+        "student",
+        "guest"
+      ],
+      "textEn": "Today, the teacher brings a guest to class. The guest is a nurse and the cousin of one of the students. She shows the class how she helps people at work. Then she tells a funny story, and everyone laughs. At the end, a student asks her why she became a nurse.",
+      "textFa": "امروز معلم مهمانی به کلاس می‌آورد. مهمان پرستار است و با یکی از دانش‌آموزان نسبت فامیلی دارد. او به کلاس نشان می‌دهد در محل کارش چطور به مردم کمک می‌کند. بعد داستان خنده‌داری تعریف می‌کند و همه می‌خندند. در پایان، یکی از دانش‌آموزان می‌پرسد چرا پرستار شده است.",
+      "questions": [
+        {
+          "id": "q1",
+          "promptEn": "What is the guest’s job?",
+          "optionsEn": [
+            "Teacher",
+            "Driver",
+            "Nurse",
+            "Cashier"
+          ],
+          "correctIndex": 2,
+          "explanationFa": "مهمان پرستار است."
+        },
+        {
+          "id": "q2",
+          "promptEn": "Why does everyone laugh?",
+          "optionsEn": [
+            "The guest tells a funny story.",
+            "A student drops a book.",
+            "The teacher sings a song.",
+            "The class plays a game."
+          ],
+          "correctIndex": 0,
+          "explanationFa": "همه به داستان خنده‌دار مهمان می‌خندند."
+        },
+        {
+          "id": "q3",
+          "promptEn": "What does a student ask at the end?",
+          "optionsEn": [
+            "Where do you live?",
+            "When will you visit again?",
+            "What is your favorite book?",
+            "Why did you become a nurse?"
+          ],
+          "correctIndex": 3,
+          "explanationFa": "دانش‌آموز می‌پرسد چرا مهمان پرستار شده است."
+        }
+      ],
+      "targetWordIds": [
+        "en-laugh-verb",
+        "en-teacher-noun",
+        "en-cousin-noun",
+        "en-nurse-noun",
+        "en-student-noun",
+        "en-guest-noun"
       ]
     }
   ]

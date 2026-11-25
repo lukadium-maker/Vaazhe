@@ -42,7 +42,17 @@ final class ReadingTests: XCTestCase {
             "elfy-reading-17": "story_elfy-reading-17_cover",
             "elfy-reading-18": "story_elfy-reading-18_cover",
             "elfy-reading-19": "story_elfy-reading-19_cover",
-            "elfy-reading-20": "story_elfy-reading-20_cover"
+            "elfy-reading-20": "story_elfy-reading-20_cover",
+            "elfy-reading-21": "story_elfy-reading-21_cover",
+            "elfy-reading-22": "story_elfy-reading-22_cover",
+            "elfy-reading-23": "story_elfy-reading-23_cover",
+            "elfy-reading-24": "story_elfy-reading-24_cover",
+            "elfy-reading-25": "story_elfy-reading-25_cover",
+            "elfy-reading-26": "story_elfy-reading-26_cover",
+            "elfy-reading-27": "story_elfy-reading-27_cover",
+            "elfy-reading-28": "story_elfy-reading-28_cover",
+            "elfy-reading-29": "story_elfy-reading-29_cover",
+            "elfy-reading-30": "story_elfy-reading-30_cover"
         ]
         XCTAssertTrue(Set(expected.keys).isSubset(of: Set(stories.map(\.id))))
         for story in stories.reversed() {
@@ -54,11 +64,11 @@ final class ReadingTests: XCTestCase {
     func testBundledStoriesValidateWithVocabularyOffline() throws {
         let (stories, cards) = try load()
         let cardIDs = Set(cards.map(\.id))
-        XCTAssertEqual(stories.count, 20)
-        XCTAssertEqual(Set(stories.map(\.id)).count, 20)
-        XCTAssertEqual(stories.flatMap(\.questions).count, 60)
+        XCTAssertEqual(stories.count, 30)
+        XCTAssertEqual(Set(stories.map(\.id)).count, 30)
+        XCTAssertEqual(stories.flatMap(\.questions).count, 90)
         let targetIDs = Set(stories.flatMap(\.targetWordIds))
-        XCTAssertEqual(targetIDs.count, 104)
+        XCTAssertEqual(targetIDs.count, 164)
         XCTAssertTrue(targetIDs.isSubset(of: cardIDs))
         for story in stories {
             XCTAssertEqual(story.questions.count, 3)
@@ -69,6 +79,22 @@ final class ReadingTests: XCTestCase {
                 XCTAssertFalse(question.explanationFa.isEmpty)
             }
         }
+    }
+
+    func testNewStoriesLinkEveryTarget() throws {
+        let (stories, _) = try load()
+        let added = Array(stories.suffix(10))
+        for story in added {
+            XCTAssertEqual(Set(ReadingVocabulary.matches(in: story).map(\.id)), Set(story.targetWordIds))
+        }
+    }
+
+    func testAllStoriesBundlePersianTranslations() throws {
+        let (stories, _) = try load()
+        let translated = stories.filter { $0.textFa?.isEmpty == false }
+        XCTAssertEqual(translated.count, 30)
+        XCTAssertEqual(Set(translated.map(\.level)), Set(ReadingLevel.allCases))
+        XCTAssertTrue(translated.allSatisfy { $0.textFa?.contains("ي") == false })
     }
 
     @MainActor func testReadingResetClearsCompletionAndAllowsFreshDailyPick() throws {
@@ -107,7 +133,7 @@ final class ReadingTests: XCTestCase {
 
     func testLevelAndReadFilters() throws {
         let (stories, _) = try load()
-        for (filter, count) in [(ReadingFilter.all, 20), (.a1, 6), (.a2, 10), (.b1, 4), (.read, 0)] {
+        for (filter, count) in [(ReadingFilter.all, 30), (.a1, 6), (.a2, 20), (.b1, 4), (.read, 0)] {
             XCTAssertEqual(stories.filter { filter.includes($0, record: nil) }.count, count)
         }
         let read = ReadingRecord(read: true, bestScore: 0, recentScore: nil, attempts: 0, lastCompletion: nil)
@@ -163,6 +189,68 @@ final class ReadingTests: XCTestCase {
             stories: stories, statuses: [:], progress: [:], recalls: [], records: [first.storyID: completed], at: now
         ))
         XCTAssertEqual(next.storyID, "elfy-reading-02")
+    }
+
+    func testFirstVocabularyLessonPreparesLearnerForTheEarlyTrain() throws {
+        let (stories, cards) = try load()
+        let planner = StudyPlanner(cards: cards, progress: [:], goal: 10, at: now, calendar: calendar)
+        let firstStory = try XCTUnwrap(ReadingRecommendationEngine.recommend(
+            stories: stories, statuses: planner.status, progress: [:], recalls: [], records: [:], at: now,
+            calendar: calendar
+        ))
+        let story = try XCTUnwrap(stories.first { $0.id == firstStory.storyID })
+        XCTAssertEqual(story.titleEn, "The Early Train")
+        XCTAssertEqual(planner.newCards.count, 10)
+        XCTAssertTrue(Set(story.targetWordIds).isSubset(of: Set(planner.newCards.map(\.id))))
+        XCTAssertEqual(Set(planner.newCards.map(\.word)).subtracting(story.targetWords), ["train", "morning", "late"])
+    }
+
+    func testSecondVocabularyLessonPreparesLearnerForATripWithAProblem() throws {
+        let (stories, cards) = try load()
+        let first = StudyPlanner(cards: cards, progress: [:], goal: 10, at: now, calendar: calendar)
+        let nextDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: now))
+        var progress = Dictionary(uniqueKeysWithValues: first.newCards.map {
+            ($0.id, StudyPlanner.Progress(introduced: now, due: nextDay))
+        })
+        let second = StudyPlanner(cards: cards, progress: progress, goal: 10, at: nextDay, calendar: calendar)
+        XCTAssertEqual(second.newCards.count, 10)
+        for card in second.newCards {
+            progress[card.id] = .init(introduced: nextDay, due: nextDay)
+        }
+        let story = try XCTUnwrap(stories.first { $0.titleEn == "A Trip with a Problem" })
+        XCTAssertTrue(Set(story.targetWordIds).isSubset(of: Set(progress.keys)))
+        let completed = ReadingRecord(read: true, bestScore: 3, recentScore: 3, attempts: 1, lastCompletion: now)
+        let recommendation = ReadingRecommendationEngine.recommend(
+            stories: stories, statuses: second.status, progress: progress, recalls: [],
+            records: ["elfy-reading-01": completed], at: nextDay, calendar: calendar,
+            previousStoryID: "elfy-reading-01"
+        )
+        XCTAssertEqual(recommendation?.storyID, story.id)
+    }
+
+    func testFifthVocabularyLessonPreparesLearnerForASmallBookshop() throws {
+        let (stories, cards) = try load()
+        let story = try XCTUnwrap(stories.first { $0.titleEn == "A Small Bookshop" })
+        let targets = Set(story.targetWordIds)
+        var progress: [String: StudyPlanner.Progress] = [:]
+        for day in 0..<5 {
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: day, to: now))
+            let planner = StudyPlanner(cards: cards, progress: progress, goal: 10, at: date, calendar: calendar)
+            XCTAssertEqual(planner.newCards.count, 10)
+            let ids = Set(planner.newCards.map(\.id))
+            if day < 4 {
+                XCTAssertTrue(targets.isDisjoint(with: ids))
+            } else {
+                XCTAssertTrue(targets.isSubset(of: ids))
+            }
+            for card in try XCTUnwrap(planner.dailyPlan).cards {
+                let old = progress[card.id]
+                let next = Schedule(days: old?.days ?? 0, streak: old?.streak ?? 0, due: old?.due ?? date)
+                    .rated(.good, at: date, calendar: calendar)
+                progress[card.id] = .init(introduced: old?.introduced ?? date, due: next.due,
+                                          days: next.days, streak: next.streak)
+            }
+        }
     }
 
     func testRecommendationsRespondToDifferentLearnersAndDifficultWords() throws {
@@ -298,7 +386,7 @@ final class ReadingTests: XCTestCase {
             return (story.id, ReadingRecord(read: true, bestScore: 3, recentScore: 3,
                                             attempts: 1, lastCompletion: completion))
         })
-        XCTAssertEqual(records.count, 20)
+        XCTAssertEqual(records.count, 30)
         func pick(previous: String? = nil) -> String? {
             ReadingRecommendationEngine.recommend(stories: stories, statuses: [:], progress: [:], recalls: [],
                                                   records: records, at: now, calendar: calendar,

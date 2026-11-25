@@ -237,7 +237,7 @@ struct DeveloperMenu: View {
         let cards = deck + personal.map(\.card)
         let progress = Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0.progress) })
         let recalls = events.compactMap(\.recall)
-        let planner = StudyPlanner(cards: cards, progress: progress, goal: goal, at: simulation.date,
+        let planner = StudyPlanner(cards: cards, progress: progress, goal: DailyGoal.preferred(goal), at: simulation.date,
                                    calendar: simulation.calendar, recalls: recalls)
         let history = (try? PracticeStore.results(in: simulation.container.mainContext)) ?? []
         let engine = PracticeEngine(cards: cards, progress: progress, difficult: Set(planner.difficultCards.map(\.id)),
@@ -305,7 +305,7 @@ struct DeveloperMenu: View {
         let cards = deck + personal.map(\.card)
         let progress = Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0.progress) })
         let recalls = events.compactMap(\.recall)
-        let planner = StudyPlanner(cards: cards, progress: progress, goal: goal, at: date,
+        let planner = StudyPlanner(cards: cards, progress: progress, goal: DailyGoal.preferred(goal), at: date,
                                    calendar: calendar, recalls: recalls)
         let entries: [QueueEntry] = cards.compactMap { card in
             guard let state = progress[card.id] else { return nil }
@@ -340,7 +340,7 @@ struct DeveloperMenu: View {
             let states = try context.fetch(FetchDescriptor<ReviewState>())
             let progress = Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0.progress) })
             let recalls = try context.fetch(FetchDescriptor<ReviewEvent>()).compactMap(\.recall)
-            let planner = StudyPlanner(cards: deck + personal.map(\.card), progress: progress, goal: goal,
+            let planner = StudyPlanner(cards: deck + personal.map(\.card), progress: progress, goal: DailyGoal.preferred(goal),
                                        at: date, calendar: calendar, recalls: recalls)
             let id = try ReadingStore.dailyStoryID(stories: stories, planner: planner, progress: progress, recalls: recalls,
                                                    records: records, at: date, calendar: calendar, in: readingContext)

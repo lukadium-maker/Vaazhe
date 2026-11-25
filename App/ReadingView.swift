@@ -414,6 +414,7 @@ private struct ReadingPassageView: View {
     @State private var definition: Card?
     @State private var errorMessage: String?
     @State private var savedRead = false
+    @State private var showsTranslation = false
 
     var body: some View {
         Page(readingPosition: $position) {
@@ -463,6 +464,10 @@ private struct ReadingPassageView: View {
                 })
                 .modifier(Panel())
 
+            if let translation = story.textFa {
+                translationPanel(translation)
+            }
+
             let vocabulary = encounteredCards(in: story, cards: cards)
             if !vocabulary.isEmpty {
                 DisclosureGroup("واژه‌های داستان") {
@@ -497,6 +502,39 @@ private struct ReadingPassageView: View {
             ReadingDefinition(card: card, status: statuses[card.id])
         }
         .readingError($errorMessage)
+    }
+
+    private func translationPanel(_ translation: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                showsTranslation.toggle()
+            } label: {
+                HStack(spacing: 10) {
+                    Label(showsTranslation ? "پنهان کردن ترجمهٔ فارسی" : "نمایش ترجمهٔ فارسی",
+                          systemImage: "character.bubble")
+                        .font(PersianFont.emphasis)
+                    Spacer(minLength: 8)
+                    Image(systemName: showsTranslation ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Palette.sage)
+
+            if showsTranslation {
+                Divider().overlay(Palette.border)
+                Text(translation)
+                    .font(PersianFont.body)
+                    .lineSpacing(6)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .modifier(Panel(fill: Palette.tint, padding: 12))
+        .environment(\.layoutDirection, .rightToLeft)
     }
 
     private var linkedPassage: AttributedString {

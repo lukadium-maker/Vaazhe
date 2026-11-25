@@ -164,12 +164,14 @@ struct DailyGoalSelector: View {
     @Binding var goal: Int
     @State private var showsChoices = false
 
+    private var preferredGoal: Int { DailyGoal.preferred(goal) }
+
     var body: some View {
         Button {
             showsChoices = true
         } label: {
             HStack(spacing: 8) {
-                Text(title(for: goal))
+                Text("تا \(fa(preferredGoal)) واژهٔ جدید")
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
                     .accessibilityHidden(true)
@@ -182,13 +184,13 @@ struct DailyGoalSelector: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("هدف روزانه")
-        .accessibilityValue(title(for: goal))
+        .accessibilityLabel("سقف واژه‌های جدید روزانه")
+        .accessibilityValue(title(for: preferredGoal))
         .sheet(isPresented: $showsChoices) {
             NavigationStack {
                 Page {
                     VStack(spacing: 4) {
-                        ForEach(DailyGoal.choices(including: goal), id: \.self) { count in
+                        ForEach(DailyGoal.presets, id: \.self) { count in
                             Button {
                                 goal = count
                                 showsChoices = false
@@ -196,7 +198,7 @@ struct DailyGoalSelector: View {
                                 HStack {
                                     Text(title(for: count)).font(PersianFont.emphasis)
                                     Spacer()
-                                    if goal == count {
+                                    if preferredGoal == count {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(Palette.sage)
                                             .accessibilityHidden(true)
@@ -207,10 +209,13 @@ struct DailyGoalSelector: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-                            .accessibilityAddTraits(goal == count ? .isSelected : [])
+                            .accessibilityAddTraits(preferredGoal == count ? .isSelected : [])
                         }
                     }
                     .modifier(Panel())
+                    Text("این عدد سقف واژه‌های جدید است. وقتی مرور بیشتری داری، برنامهٔ امروز می‌تواند واژه‌های تازهٔ کمتری پیشنهاد کند.")
+                        .font(PersianFont.subheadline)
+                        .foregroundStyle(Palette.muted)
                 }
                 .persianNavigationTitle("هدف روزانه")
                 .toolbar {
@@ -225,6 +230,6 @@ struct DailyGoalSelector: View {
     }
 
     private func title(for count: Int) -> String {
-        count == 0 ? "فقط مرور" : "\(fa(count)) واژهٔ جدید"
+        "\(fa(count)) واژهٔ جدید"
     }
 }

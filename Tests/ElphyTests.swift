@@ -153,7 +153,7 @@ final class ElphyTests: XCTestCase {
         XCTAssertEqual(TodayLearningState(planner: partial), .next(.continueStudy))
         XCTAssertEqual(fraction(partial), 0.5)
         XCTAssertEqual(partial.newCards.count, 5)
-        XCTAssertEqual(fraction(planner(5, goal: 20), goal: 20), 5.0 / 10)
+        XCTAssertEqual(fraction(planner(5, goal: 20), goal: 20), 5.0 / 12)
         let complete = planner(10)
         XCTAssertEqual(TodayLearningState(planner: complete), .goalComplete(action: .practice))
         XCTAssertEqual(fraction(complete), 1)
@@ -212,7 +212,9 @@ final class ElphyTests: XCTestCase {
         XCTAssertEqual(first.newCards.count, 10)
         XCTAssertEqual(first.remainingNew, 13)
         XCTAssertEqual(first.status[cards[0].id]?.stage, .new)
-        XCTAssertEqual(DailyGoal.choices(including: 17), [0, 5, 10, 17, 20, 30])
+        XCTAssertEqual(DailyGoal.presets, [5, 10, 20])
+        XCTAssertEqual(DailyGoal.preferred(30), 20)
+        XCTAssertEqual(DailyGoal.preferred(0), 5)
 
         let state = [cards[0].id: StudyPlanner.Progress(introduced: now, due: now.addingTimeInterval(600))]
         let changed = StudyPlanner(cards: cards, progress: state, goal: 5, at: now, calendar: calendar)

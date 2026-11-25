@@ -680,7 +680,8 @@ struct PracticeGameView: View {
 
 private extension View {
     func practiceEnglish() -> some View {
-        environment(\.layoutDirection, .leftToRight)
+        multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .environment(\.layoutDirection, .leftToRight)
     }
 }

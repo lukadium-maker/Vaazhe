@@ -149,7 +149,7 @@ struct Library: View {
         let readingRefreshDay = scenePhase == .active && (selection == .today || reading != nil) ? readingTask : nil
         let dailyProgress = DailyLearningProgress(day: calendar.startOfDay(for: now),
                                                   count: planner.introducedToday, target: planner.effectiveGoal,
-                                                  configuredGoal: goal)
+                                                  configuredGoal: DailyGoal.preferred(goal))
         let canCelebrate = pendingGoalDay == day.key && planner.reachedGoalToday && selection == .today
             && scenePhase == .active && presentedStudyMode == nil && quiz == nil && reading == nil
 
@@ -306,7 +306,7 @@ struct Library: View {
     }
 
     private func makePlanner(at date: Date, recalls: [Recall], calendar: Calendar) -> StudyPlanner {
-        StudyPlanner(cards: cards, progress: stateByID.mapValues(\.progress), goal: goal,
+        StudyPlanner(cards: cards, progress: stateByID.mapValues(\.progress), goal: DailyGoal.preferred(goal),
                      at: date, calendar: calendar, recalls: recalls)
     }
 

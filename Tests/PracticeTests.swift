@@ -52,7 +52,7 @@ final class PracticeTests: XCTestCase {
         sharedMeaning.id = "shared"
         sharedMeaning.word = "return"
         sharedMeaning.meaningFa = "باز آمدن"
-        sharedMeaning.alternativeMeaningsFa = [card.meaningFa]
+        sharedMeaning.alternativeMeaningsFa = ["بازگشت؛ " + card.meaningFa]
         var random = Random()
         let cards = [card, homograph, sharedMeaning]
         let round = engine(cards, seen: cards).round(for: .matching, mode: .quick, difficulty: .easy, using: &random)
@@ -109,6 +109,33 @@ final class PracticeTests: XCTestCase {
         altered.word = "art"
         altered.exampleEn = "They started late."
         XCTAssertNil(PracticeCloze.blank(for: altered))
+    }
+
+    func testExpandedCatalogFeedsEveryPracticeGameAndMeaningQuiz() throws {
+        let cards = try catalog()
+        XCTAssertEqual(cards.count, 300)
+        let new = Array(cards.suffix(150))
+        var random = Random()
+        let curated = new.compactMap { PracticeCloze.question(for: $0, using: &random) }
+        XCTAssertEqual(curated.count, 88)
+        let ids = Set(new.map(\.id))
+        for game in PracticeGame.allCases {
+            let round = engine(cards, seen: new).round(for: game, mode: .standard,
+                                                      difficulty: .easy, using: &random)
+            XCTAssertEqual(round.count, game == .matching ? 5 : 10)
+            XCTAssertTrue(round.allSatisfy { ids.contains($0.card.id) })
+            if game == .sentence {
+                XCTAssertTrue(round.allSatisfy { Set($0.options).count == 4 && $0.options.contains($0.answer) })
+            }
+        }
+        let questions = QuizSession.makeQuestions(practicedCards: new, distractorPool: cards,
+                                                  limit: 150, using: &random)
+        XCTAssertEqual(questions.count, 150)
+        for question in questions {
+            XCTAssertTrue(ids.contains(question.card.id))
+            XCTAssertEqual(question.choices.filter { $0 == question.card.meaningFa }.count, 1)
+            XCTAssertEqual(Set(question.choices.map(Card.normalizedMeaning)).count, 4)
+        }
     }
 
     func testRepeatedLettersHintsUndoAndIndependentEvidence() {
