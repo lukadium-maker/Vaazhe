@@ -186,9 +186,9 @@ final class LongTermLearningTests: XCTestCase {
 
     func testWorkloadPolicyBoundariesAndPreference() {
         let policy = DailyWorkloadPolicy()
-        for (due, limit) in [(0, 10), (15, 10), (16, 10), (25, 10), (26, 5), (40, 5),
+        for (due, limit) in [(0, 20), (15, 20), (16, 10), (25, 10), (26, 5), (40, 5),
                              (41, 3), (60, 3), (61, 0)] {
-            XCTAssertEqual(policy.newWordLimit(for: due, preference: 30), limit)
+            XCTAssertEqual(policy.newWordLimit(for: due, preference: 20), limit)
             XCTAssertEqual(policy.newWordLimit(for: due, preference: 5), min(limit, 5))
             XCTAssertEqual(policy.newWordLimit(for: due, preference: 0), 0)
         }

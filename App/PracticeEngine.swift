@@ -185,8 +185,8 @@ struct PracticeEngine {
         var questions: [PracticeQuestion] = []
         for card in ranked {
             let word = card.word.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            let translations = Set(([card.meaningFa] + card.alternativeMeaningsFa).map(Self.normalizedMeaning))
-            guard !words.contains(word), !Self.normalizedMeaning(card.meaningFa).isEmpty else { continue }
+            let translations = card.meaningKeys
+            guard !words.contains(word), !Card.normalizedMeaning(card.meaningFa).isEmpty else { continue }
             let question: PracticeQuestion
             switch game {
             case .matching:
@@ -201,7 +201,7 @@ struct PracticeEngine {
                 // A Persian clue shared by two known spellings cannot uniquely identify either.
                 guard !encountered.contains(where: {
                     $0.id != card.id && $0.word.lowercased() != word &&
-                    !translations.isDisjoint(with: ([ $0.meaningFa ] + $0.alternativeMeaningsFa).map(Self.normalizedMeaning))
+                    !translations.isDisjoint(with: $0.meaningKeys)
                 }) else { continue }
                 question = PracticeQuestion(card: card, blank: PracticeCloze.blank(for: card) ?? "", answer: word, options: [])
             }
@@ -213,13 +213,7 @@ struct PracticeEngine {
         return questions
     }
 
-    static func normalizedMeaning(_ text: String) -> String {
-        text.replacingOccurrences(of: "ي", with: "ی")
-            .replacingOccurrences(of: "ك", with: "ک")
-            .replacingOccurrences(of: "\u{200c}", with: "")
-            .components(separatedBy: .whitespacesAndNewlines)
-            .joined()
-    }
+
 }
 
 struct PracticeTiles {

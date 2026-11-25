@@ -14,6 +14,20 @@ struct Card: Codable, Identifiable {
 
     var isPersonal: Bool { id.hasPrefix("personal-") }
 
+    static func normalizedMeaning(_ value: String) -> String {
+        value.replacingOccurrences(of: "ي", with: "ی")
+            .replacingOccurrences(of: "ك", with: "ک")
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "fa_IR"))
+            .filter { !$0.isWhitespace && $0 != "\u{200c}" }
+    }
+
+    var meaningKeys: Set<String> {
+        Set(([meaningFa] + alternativeMeaningsFa)
+            .flatMap { $0.split(whereSeparator: { "،,؛;/".contains($0) }) }
+            .map { Self.normalizedMeaning(String($0)) }
+            .filter { !$0.isEmpty })
+    }
+
     static func load(from bundle: Bundle = .main) throws -> [Card] {
         guard let url = bundle.url(forResource: "vocabulary", withExtension: "json") else {
             throw CocoaError(.fileNoSuchFile)
@@ -44,10 +58,10 @@ enum Rating: String, CaseIterable {
 
 enum DailyGoal {
     static let defaultValue = 10
-    static let presets = [0, 5, 10, 20, 30]
+    static let presets = [5, 10, 20]
 
-    static func choices(including current: Int) -> [Int] {
-        Set(presets + [current]).sorted()
+    static func preferred(_ saved: Int) -> Int {
+        presets.last { $0 <= saved } ?? presets[0]
     }
 }
 
@@ -192,7 +206,7 @@ struct MasteryBreakdown {
 
 struct DailyWorkloadPolicy {
     var reviewLimit = 25
-    var newWordLimits = [(through: 15, limit: 10), (through: 25, limit: 10),
+    var newWordLimits = [(through: 15, limit: 20), (through: 25, limit: 10),
                          (through: 40, limit: 5), (through: 60, limit: 3)]
     var recoveryThreshold = 26
     var secondsPerNewWord = 24
@@ -219,6 +233,19 @@ struct StudyPlanner {
     enum NextAction: Equatable {
         case learn, review, mixed, continueStudy, practice, setGoal, browse
     }
+
+    // Teach vocabulary that supports the early reading stories before following catalog order.
+    private static let starterReadingWords = [
+        "en-train-noun", "en-ticket-noun", "en-station-noun", "en-wait-verb", "en-arrive-verb",
+        "en-early-adverb", "en-leave-verb", "en-meet-verb", "en-morning-noun", "en-late-adjective",
+        "en-airport-noun", "en-passport-noun", "en-traffic-noun", "en-trip-noun", "en-airline-noun",
+        "en-find-verb", "en-bag-noun", "en-plane-noun", "en-plan-noun", "en-enough-adverb"
+    ]
+
+    private static let fifthLessonWords = [
+        "en-dictionary-noun", "en-learn-verb", "en-question-noun", "en-choose-verb", "en-spell-verb",
+        "en-repeat-verb", "en-remember-verb", "en-look-verb", "en-bed-noun", "en-door-noun"
+    ]
 
     let newCards: [Card]
     let dueCards: [Card]
@@ -257,7 +284,16 @@ struct StudyPlanner {
             return calendar.isDate(state.introduced, inSameDayAs: date)
         }
         let seenToday = introducedTodayCards.count
-        let available = fresh.filter(\.isPersonal) + fresh.filter { !$0.isPersonal }
+        let personal = fresh.filter(\.isPersonal)
+        let bundled = cards.filter { !$0.isPersonal }
+        let byID = Dictionary(uniqueKeysWithValues: bundled.map { ($0.id, $0) })
+        let starter = Self.starterReadingWords.compactMap { byID[$0] }
+        let fifthLesson = Self.fifthLessonWords.compactMap { byID[$0] }
+        let reserved = Set((starter + fifthLesson).map(\.id))
+        let catalogOrder = bundled.filter { !reserved.contains($0.id) }
+        let middle = max(0, 40 - starter.count)
+        let sequence = starter + Array(catalogOrder.prefix(middle)) + fifthLesson + Array(catalogOrder.dropFirst(middle))
+        let available = personal + sequence.filter { progress[$0.id] == nil }
         cardsIntroducedToday = introducedTodayCards
         introducedToday = seenToday
         remainingNew = fresh.count
@@ -437,11 +473,11 @@ struct QuizSession {
 
         for card in practicedCards.shuffled(using: &random) {
             let key = headwordKey(card)
-            let primary = normalizedMeaning(card.meaningFa)
+            let primary = Card.normalizedMeaning(card.meaningFa)
             guard !key.isEmpty, !primary.isEmpty, !usedHeadwords.contains(key) else { continue }
-            var reserved = meaningKeys(for: card)
+            var reserved = card.meaningKeys
             for sense in byHeadword[key] ?? [] {
-                reserved.formUnion(meaningKeys(for: sense))
+                reserved.formUnion(sense.meaningKeys)
             }
             var distractors: [String] = []
             let alternatives = candidates.filter { $0.id != card.id && headwordKey($0) != key }
@@ -451,8 +487,8 @@ struct QuizSession {
                 + alternatives.filter { $0.partOfSpeech != card.partOfSpeech }
 
             for candidate in ordered {
-                let keys = meaningKeys(for: candidate)
-                guard !normalizedMeaning(candidate.meaningFa).isEmpty,
+                let keys = candidate.meaningKeys
+                guard !Card.normalizedMeaning(candidate.meaningFa).isEmpty,
                       reserved.isDisjoint(with: keys) else { continue }
                 distractors.append(candidate.meaningFa)
                 reserved.formUnion(keys)
@@ -488,17 +524,5 @@ struct QuizSession {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US"))
     }
 
-    private static func normalizedMeaning(_ value: String) -> String {
-        value.replacingOccurrences(of: "ي", with: "ی")
-            .replacingOccurrences(of: "ك", with: "ک")
-            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "fa_IR"))
-            .filter { !$0.isWhitespace && $0 != "\u{200c}" }
-    }
 
-    private static func meaningKeys(for card: Card) -> Set<String> {
-        Set(([card.meaningFa] + card.alternativeMeaningsFa)
-            .flatMap { $0.split(whereSeparator: { "،,؛;/".contains($0) }) }
-            .map { normalizedMeaning(String($0)) }
-            .filter { !$0.isEmpty })
-    }
 }

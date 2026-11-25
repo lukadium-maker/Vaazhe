@@ -28,6 +28,7 @@ struct ReadingStory: Decodable, Identifiable {
     let targetWords: [String]
     let targetWordIds: [String]
     let textEn: String
+    let textFa: String?
     let questions: [ReadingQuestion]
 
     var readingMinutes: Int {
@@ -40,7 +41,9 @@ enum ReadingCover {
         "elfy-reading-01", "elfy-reading-02", "elfy-reading-03", "elfy-reading-04", "elfy-reading-05",
         "elfy-reading-06", "elfy-reading-07", "elfy-reading-08", "elfy-reading-09", "elfy-reading-10",
         "elfy-reading-11", "elfy-reading-12", "elfy-reading-13", "elfy-reading-14", "elfy-reading-15",
-        "elfy-reading-16", "elfy-reading-17", "elfy-reading-18", "elfy-reading-19", "elfy-reading-20"
+        "elfy-reading-16", "elfy-reading-17", "elfy-reading-18", "elfy-reading-19", "elfy-reading-20",
+        "elfy-reading-21", "elfy-reading-22", "elfy-reading-23", "elfy-reading-24", "elfy-reading-25",
+        "elfy-reading-26", "elfy-reading-27", "elfy-reading-28", "elfy-reading-29", "elfy-reading-30"
     ]
 
     static func assetName(for storyID: String) -> String? {
@@ -103,7 +106,10 @@ enum ReadingVocabulary {
         "receive": ["receives"], "notice": ["notices"], "respond": ["responds"],
         "consider": ["considers"], "achieve": ["achieved"], "expect": ["expects"],
         "include": ["includes"], "check": ["checks"], "return": ["returns"],
-        "recommend": ["recommends"], "tend": ["tends"], "habit": ["habits"]
+        "recommend": ["recommends"], "tend": ["tends"], "habit": ["habits"],
+        "ask": ["asks"], "show": ["shows"], "walk": ["walks"], "pick": ["picks"],
+        "throw": ["throws"], "drop": ["drops"], "catch": ["catches"], "fall": ["fallen"],
+        "push": ["pushes"], "sit": ["sits"], "student": ["students"], "laugh": ["laughs"]
     ]
 
     // These editorial targets appear as nouns, while the deck defines the verb.
