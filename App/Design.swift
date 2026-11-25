@@ -33,7 +33,14 @@ struct ElphyMascotView: View {
     enum Mood: String, CaseIterable {
         case welcome, studying, thinking, celebrating, encouraging, sleepy, reading, proud
 
-        var assetName: String { "elphy_" + rawValue }
+        var assetName: String {
+            switch self {
+            case .encouraging, .sleepy: "elphy_mark_neutral"
+            case .welcome: "elphy_mark_welcoming"
+            case .studying, .thinking, .reading: "elphy_mark_focused"
+            case .celebrating, .proud: "elphy_mark_proud"
+            }
+        }
 
         var accessibilityLabel: String {
             switch self {
@@ -59,14 +66,15 @@ struct ElphyMascotView: View {
     var body: some View {
         ZStack {
             Image(mood.assetName)
-                .renderingMode(.original)
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .id(mood)
+                .foregroundStyle(Palette.mascotGreen)
+                .id(mood.assetName)
                 .transition(reduceMotion ? .identity : .opacity)
         }
         .frame(width: size, height: size)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: mood)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: mood.assetName)
         .opacity(animatesAppearance && !appeared && !reduceMotion ? 0.76 : 1)
         .onAppear {
             guard animatesAppearance, !appeared else { return }

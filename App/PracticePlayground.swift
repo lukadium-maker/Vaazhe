@@ -563,8 +563,11 @@ struct PracticeGameView: View {
     private var nextTitle: String { index + 1 == round.count ? "دیدن نتیجه" : "ادامه" }
 
     private func summary(_ result: PracticeResult) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ElphyMascotView(mood: newBest ? .celebrating : .encouraging, size: 76)
+        let perfectMatch = result.game == .matching && !result.answers.isEmpty
+            && result.correct == result.answers.count && result.mistakes == 0
+        return VStack(alignment: .leading, spacing: 12) {
+            PracticeResultCelebration(mood: perfectMatch ? .proud : newBest ? .celebrating : .encouraging)
+                .id(result.id)
             Text(newBest ? "بهترین نتیجه‌ات رو بهتر کردی!" : "آفرین! این دور تموم شد.")
                 .font(HeadingFont.section)
             LabeledContent("پاسخ درست", value: "\(fa(result.correct)) از \(fa(result.answers.count))")
@@ -674,6 +677,59 @@ struct PracticeGameView: View {
             saveFailed = false
         } catch {
             saveFailed = true
+        }
+    }
+}
+
+private struct PracticeResultCelebration: View {
+    let mood: ElphyMascotView.Mood
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var burst = false
+    @State private var fading = false
+
+    private static let starOffsets: [CGSize] = [
+        .init(width: -67, height: -26), .init(width: -45, height: -48),
+        .init(width: 4, height: -54), .init(width: 51, height: -41),
+        .init(width: 69, height: -5), .init(width: 55, height: 34),
+        .init(width: -54, height: 35)
+    ]
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Palette.tint)
+                .overlay {
+                    Circle().strokeBorder(Palette.sage.opacity(0.28), lineWidth: 1)
+                }
+                .frame(width: 88, height: 88)
+            ElphyMascotView(mood: mood, size: 78)
+            ForEach(Self.starOffsets.indices, id: \.self) { index in
+                let offset = Self.starOffsets[index]
+                let expanded = reduceMotion || burst
+                Image(systemName: "star.fill")
+                    .font(.system(size: index.isMultiple(of: 2) ? 11 : 7))
+                    .foregroundStyle(Palette.celebrationGold)
+                    .scaleEffect(expanded ? 1 : 0.25)
+                    .offset(x: offset.width * (expanded ? 1 : 0.25),
+                            y: offset.height * (expanded ? 1 : 0.25))
+                    .opacity(reduceMotion ? 0.7 : fading || !burst ? 0 : 0.9)
+            }
+        }
+        .frame(height: 126)
+        .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+        .task {
+            guard !reduceMotion else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(100))
+                withAnimation(.easeOut(duration: 0.45)) { burst = true }
+                try await Task.sleep(for: .milliseconds(650))
+                withAnimation(.easeIn(duration: 0.3)) { fading = true }
+            } catch {
+                // Leaving the result cancels the celebration.
+            }
         }
     }
 }
