@@ -12,12 +12,13 @@ final class ElphyTests: XCTestCase {
 
     #if canImport(UIKit)
     @MainActor func testAllMascotPosesLoadFromTheAppBundle() throws {
-        let poses = ElphyMascotView.Mood.allCases
-        XCTAssertEqual(poses.count, 8)
-        for pose in poses {
-            let image = try XCTUnwrap(UIImage(named: pose.assetName, in: .main, compatibleWith: nil), pose.assetName)
+        let assets = Set(ElphyMascotView.Mood.allCases.map(\.assetName))
+        XCTAssertEqual(assets, ["elphy_mark_neutral", "elphy_mark_welcoming", "elphy_mark_focused", "elphy_mark_proud"])
+        for asset in assets {
+            let image = try XCTUnwrap(UIImage(named: asset, in: .main, compatibleWith: nil), asset)
             let pixels = try XCTUnwrap(image.cgImage)
-            XCTAssertEqual(max(pixels.width, pixels.height), 420)
+            XCTAssertEqual(pixels.width, pixels.height)
+            XCTAssertGreaterThanOrEqual(pixels.width, 420)
         }
     }
     #endif
