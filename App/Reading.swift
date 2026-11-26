@@ -147,6 +147,10 @@ enum ReadingVocabulary {
         let id: String
     }
 
+    enum Highlight {
+        case today, familiar
+    }
+
     static func formIndex(_ vocabulary: [(id: String, word: String)]) -> [String: Set<String>] {
         var candidates: [String: Set<String>] = [:]
         for (id, word) in vocabulary {
@@ -174,7 +178,18 @@ enum ReadingVocabulary {
 struct ReadingFamiliarity {
     let passageIDs: Set<String>
     let familiarPassageIDs: Set<String>
+    let todayPassageIDs: Set<String>
     let familiarTargetIDs: Set<String>
+
+    var previouslyStudiedPassageIDs: Set<String> {
+        familiarPassageIDs.subtracting(todayPassageIDs)
+    }
+
+    func highlight(for id: String) -> ReadingVocabulary.Highlight? {
+        if todayPassageIDs.contains(id) { return .today }
+        if familiarPassageIDs.contains(id) { return .familiar }
+        return nil
+    }
 
     var rankingBonus: Int {
         guard !passageIDs.isEmpty else { return 0 }
@@ -196,11 +211,13 @@ struct ReadingPassageIndex {
         matchesByStory[story.id] ?? ReadingVocabulary.matches(in: story)
     }
 
-    func familiarity(for story: ReadingStory, encountered: Set<String>) -> ReadingFamiliarity {
+    func familiarity(for story: ReadingStory, encountered: Set<String>, introducedToday: Set<String> = []) -> ReadingFamiliarity {
         let passage = Set(matches(for: story).map(\.id))
         let familiar = passage.intersection(encountered)
+        let matchedTargets = passage.intersection(story.targetWordIds)
         return ReadingFamiliarity(passageIDs: passage, familiarPassageIDs: familiar,
-                                  familiarTargetIDs: familiar.intersection(story.targetWordIds))
+                                  todayPassageIDs: familiar.intersection(introducedToday),
+                                  familiarTargetIDs: matchedTargets.intersection(familiar))
     }
 }
 
@@ -274,6 +291,7 @@ enum ReadingRecommendationEngine {
         let storyID: String
         let matchingVocabularyIDs: [String]
         let score: Int
+        let lessonOverlap: Int
 
         var explanation: String {
             matchingVocabularyIDs.isEmpty
@@ -286,7 +304,8 @@ enum ReadingRecommendationEngine {
                           progress: [String: StudyPlanner.Progress], recalls: [Recall],
                           records: [String: ReadingRecord], at now: Date,
                           calendar: Calendar = .current, previousStoryID: String? = nil,
-                          passageIndex: ReadingPassageIndex = ReadingPassageIndex()) -> Recommendation? {
+                          passageIndex: ReadingPassageIndex = ReadingPassageIndex(),
+                          lessonIDs: Set<String> = []) -> Recommendation? {
         let recentCutoff = calendar.date(byAdding: .day, value: -7, to: now) ?? now
         let recentIDs = Set(recalls.filter { (recentCutoff...now).contains($0.date) }.map(\.cardID))
             .union(progress.filter { (recentCutoff...now).contains($0.value.introduced) }.keys)
@@ -310,19 +329,28 @@ enum ReadingRecommendationEngine {
             let recentlyCompleted = record?.lastCompletion.map { (recentCutoff...now).contains($0) } ?? false
             let penalty = (record?.read == true ? 2 : 0) + (record?.completed == true ? 1 : 0)
                 + (recentlyCompleted ? 5 : 0)
+            let atLevel = story.level.beginnerPriority >= targetLevel.beginnerPriority
+            let ready = atLevel && matches.count >= 3 && matches.count * 2 >= story.targetWordIds.count
+            let lessonOverlap = atLevel ? familiarity.passageIDs.intersection(lessonIDs).count : 0
             let recommendation = Recommendation(storyID: story.id, matchingVocabularyIDs: matches,
                                                 score: vocabularyScore + familiarity.rankingBonus + (story.level == targetLevel ? 4 : 0) +
-                                                    (targetLevel == .a1 ? story.level.beginnerPriority : 0) - penalty)
-            return (story: story, result: recommendation)
+                                                    (targetLevel == .a1 ? story.level.beginnerPriority : 0) - penalty,
+                                                lessonOverlap: lessonOverlap)
+            return (story: story, result: recommendation, ready: ready)
         }
         let unfinished = scored.filter {
             let record = records[$0.story.id]
             return record?.completed != true || record?.lastCompletion.map { $0 > now } == true
         }
-        let suitable = unfinished.isEmpty ? scored : unfinished
-        let otherStories = suitable.filter { $0.story.id != previousStoryID }
-        let pool = otherStories.isEmpty ? suitable : otherStories
+        let ready = unfinished.filter(\.ready)
+        let suitable = ready.isEmpty ? unfinished : ready
+        let candidates = suitable.isEmpty ? scored : suitable
+        let otherStories = candidates.filter { $0.story.id != previousStoryID }
+        let pool = otherStories.isEmpty ? candidates : otherStories
         return pool.sorted { left, right in
+            if !unfinished.isEmpty, left.result.lessonOverlap != right.result.lessonOverlap {
+                return left.result.lessonOverlap > right.result.lessonOverlap
+            }
             if left.result.score != right.result.score { return left.result.score > right.result.score }
             let leftDate = records[left.story.id]?.lastCompletion ?? .distantPast
             let rightDate = records[right.story.id]?.lastCompletion ?? .distantPast

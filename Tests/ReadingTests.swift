@@ -205,6 +205,34 @@ final class ReadingTests: XCTestCase {
         XCTAssertEqual(Set(planner.newCards.map(\.word)).subtracting(story.targetWords), ["train", "morning", "late"])
     }
 
+    func testDayOneStorySeparatesTodaysLessonFromPreviouslyStudiedWords() throws {
+        let (stories, cards) = try load()
+        let train = try XCTUnwrap(stories.first)
+        let index = ReadingPassageIndex(stories: stories, cards: cards)
+        let lesson = StudyPlanner(cards: cards, progress: [:], goal: 10, at: now, calendar: calendar).newCards
+        let ids = Set(lesson.map(\.id))
+        let progress = Dictionary(uniqueKeysWithValues: lesson.map {
+            ($0.id, StudyPlanner.Progress(introduced: now, due: now))
+        })
+        let before = index.familiarity(for: train, encountered: [], introducedToday: ids)
+        XCTAssertTrue(before.todayPassageIDs.isEmpty)
+        XCTAssertTrue(ids.allSatisfy { before.highlight(for: $0) == nil })
+
+        let tomorrow = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: now))
+        for (date, expectedToday) in [(now, ids), (tomorrow, Set<String>())] {
+            let planner = StudyPlanner(cards: cards, progress: progress, goal: 10, at: date, calendar: calendar)
+            let familiarity = index.familiarity(for: train, encountered: ids,
+                introducedToday: Set(planner.cardsIntroducedToday.map(\.id)))
+            XCTAssertEqual(familiarity.todayPassageIDs, expectedToday)
+            XCTAssertEqual(familiarity.previouslyStudiedPassageIDs, ids.subtracting(expectedToday))
+            for id in ids {
+                XCTAssertEqual(familiarity.highlight(for: id), expectedToday.contains(id) ? .today : .familiar)
+            }
+        }
+        XCTAssertEqual(Set(lesson.map(\.word)),
+                       ["train", "ticket", "station", "wait", "arrive", "early", "leave", "meet", "morning", "late"])
+    }
+
     func testSecondVocabularyLessonPreparesLearnerForATripWithAProblem() throws {
         let (stories, cards) = try load()
         let first = StudyPlanner(cards: cards, progress: [:], goal: 10, at: now, calendar: calendar)
@@ -226,6 +254,53 @@ final class ReadingTests: XCTestCase {
             previousStoryID: "elfy-reading-01"
         )
         XCTAssertEqual(recommendation?.storyID, story.id)
+    }
+
+    @MainActor func testDayFourStoryUsesLessonWordsAndProtectsOpenedAssignment() throws {
+        let (stories, cards) = try load()
+        let breakfast = try XCTUnwrap(stories.first { $0.titleEn == "Breakfast for Two" })
+        let train = try XCTUnwrap(stories.first)
+        let candidates = [train, breakfast]
+        let index = ReadingPassageIndex(stories: stories, cards: cards)
+        var progress: [String: StudyPlanner.Progress] = [:]
+        let date = try XCTUnwrap(calendar.date(byAdding: .day, value: 3, to: now))
+        for offset in 0..<3 {
+            let day = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: now))
+            let planner = StudyPlanner(cards: cards, progress: progress, goal: 10, at: day, calendar: calendar)
+            for card in try XCTUnwrap(planner.dailyPlan).cards {
+                let old = progress[card.id]
+                let next = Schedule(days: old?.days ?? 0, streak: old?.streak ?? 0, due: old?.due ?? day)
+                    .rated(.good, at: day, calendar: calendar)
+                progress[card.id] = .init(introduced: old?.introduced ?? day, due: next.due,
+                                          days: next.days, streak: next.streak)
+            }
+        }
+        let before = StudyPlanner(cards: cards, progress: progress, goal: 10, at: date, calendar: calendar)
+        let lessonIDs = Set(before.newCards.map(\.id))
+        let reinforced = index.familiarity(for: breakfast, encountered: lessonIDs).familiarPassageIDs
+        XCTAssertEqual(Set(cards.filter { reinforced.contains($0.id) }.map(\.word)),
+                       ["already", "borrow", "open", "agree"])
+        XCTAssertEqual(ReadingRecommendationEngine.recommend(stories: candidates, statuses: before.status,
+            progress: progress, recalls: [], records: [:], at: date, calendar: calendar, passageIndex: index,
+            lessonIDs: lessonIDs)?.storyID, breakfast.id)
+
+        for id in lessonIDs { progress[id] = .init(introduced: date, due: date) }
+        let after = StudyPlanner(cards: cards, progress: progress, goal: 10, at: date, calendar: calendar)
+        XCTAssertTrue(after.reachedGoalToday)
+        for opened in [false, true] {
+            let container = try ModelContainer(for: ReadingProgress.self, DailyReadingPick.self,
+                                               configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            let context = container.mainContext
+            _ = try ReadingStore.dailyStoryID(at: date, calendar: calendar,
+                availableIDs: Set(candidates.map(\.id)), in: context) { _ in train.id }
+            if opened {
+                try ReadingStore.lockDailyStory(train.id, at: date, calendar: calendar, in: context)
+            }
+            let pick = try ReadingStore.dailyAssignment(stories: candidates, planner: after, progress: progress,
+                recalls: [], records: [:], at: date, calendar: calendar, in: context, passageIndex: index)
+            XCTAssertEqual(pick?.storyID, opened ? train.id : breakfast.id)
+            XCTAssertEqual(pick?.isLocked, true)
+        }
     }
 
     func testFifthVocabularyLessonPreparesLearnerForASmallBookshop() throws {
@@ -292,6 +367,35 @@ final class ReadingTests: XCTestCase {
         XCTAssertFalse(matches.contains { ["Ticketing", "lately"].contains(String(story.textEn[$0.range])) })
     }
 
+    func testMissingBagOnlyHighlightsWordsAfterIntroduction() throws {
+        let (stories, cards) = try load()
+        let story = try XCTUnwrap(stories.first { $0.titleEn == "The Missing Bag" })
+        let index = ReadingPassageIndex(stories: stories, cards: cards)
+        let encountered = Set(cards.filter { ["leave", "find", "bag", "help", "close", "need"].contains($0.word) }.map(\.id))
+        let familiarity = index.familiarity(for: story, encountered: encountered)
+        let highlights = index.matches(for: story).compactMap { match in
+            familiarity.highlight(for: match.id).map { (match, $0) }
+        }
+
+        XCTAssertEqual(familiarity.familiarPassageIDs.count, 6)
+        XCTAssertEqual(highlights.count, 8)
+        XCTAssertTrue(highlights.allSatisfy { $0.1 == .familiar })
+        let unintroduced = index.matches(for: story).filter { ["en-open-verb", "en-remember-verb"].contains($0.id) }
+        XCTAssertEqual(unintroduced.map { String(story.textEn[$0.range]) }, ["opens", "remember"])
+        XCTAssertTrue(unintroduced.allSatisfy { familiarity.highlight(for: $0.id) == nil })
+        let updated = index.familiarity(for: story, encountered: encountered.union(["en-open-verb"]))
+        XCTAssertEqual(updated.familiarPassageIDs.count, 7)
+        XCTAssertEqual(updated.highlight(for: "en-open-verb"), .familiar)
+
+        let duringLessonDay = index.familiarity(for: story, encountered: encountered.union(["en-open-verb"]),
+                                               introducedToday: ["en-open-verb"])
+        XCTAssertEqual(duringLessonDay.todayPassageIDs, ["en-open-verb"])
+        XCTAssertEqual(duringLessonDay.previouslyStudiedPassageIDs, encountered)
+        XCTAssertEqual(duringLessonDay.highlight(for: "en-open-verb"), .today)
+        XCTAssertEqual(duringLessonDay.highlight(for: "en-find-verb"), .familiar)
+        XCTAssertNil(duringLessonDay.highlight(for: "en-remember-verb"))
+    }
+
     func testPassageFamiliarityCountsDistinctFormsAndSeparateTargets() throws {
         let (stories, cards) = try load()
         let story = try XCTUnwrap(stories.first { $0.titleEn == "A Healthier Habit" })
@@ -337,6 +441,41 @@ final class ReadingTests: XCTestCase {
         XCTAssertEqual(recommend(known, at: now), breakfast.id)
         XCTAssertEqual(try assign(known, date: now), train.id)
         XCTAssertEqual(try assign(known, date: nextDay), breakfast.id)
+    }
+
+    func testReadinessPrefersReinforcementBeforeAvoidingYesterday() throws {
+        let (stories, cards) = try load()
+        let train = try XCTUnwrap(stories.first)
+        let breakfast = stories[1]
+        let travel = try XCTUnwrap(stories.first { $0.level != .a1 })
+        let candidates = [train, breakfast, travel]
+        let index = ReadingPassageIndex(stories: candidates, cards: cards)
+        let recentBreakfast = Array(breakfast.targetWordIds.prefix(2))
+        let recentTravel = travel.targetWordIds
+        let trainWords = Array(train.targetWordIds.prefix(4))
+        let older = try XCTUnwrap(calendar.date(byAdding: .day, value: -8, to: now))
+        var progress = Dictionary(uniqueKeysWithValues: trainWords.map {
+            ($0, StudyPlanner.Progress(introduced: older, due: now))
+        })
+        for id in recentBreakfast + recentTravel where progress[id] == nil {
+            progress[id] = .init(introduced: now, due: now)
+        }
+        func pick(previous: String? = nil, records: [String: ReadingRecord] = [:]) -> String? {
+            ReadingRecommendationEngine.recommend(stories: candidates, statuses: [:], progress: progress,
+                recalls: [], records: records, at: now, calendar: calendar, previousStoryID: previous,
+                passageIndex: index)?.storyID
+        }
+
+        XCTAssertEqual(pick(previous: train.id), train.id)
+        let completed = ReadingRecord(read: true, bestScore: 3, recentScore: 3, attempts: 1, lastCompletion: now)
+        XCTAssertNotEqual(pick(records: [train.id: completed]), train.id)
+        for id in breakfast.targetWordIds where progress[id] == nil {
+            progress[id] = .init(introduced: now, due: now)
+        }
+        XCTAssertEqual(pick(previous: train.id), breakfast.id)
+        XCTAssertNotEqual(pick(previous: train.id, records: [
+            train.id: completed, breakfast.id: completed, travel.id: completed
+        ]), train.id)
     }
 
     func testRecommendationsRespondToDifferentLearnersAndDifficultWords() throws {

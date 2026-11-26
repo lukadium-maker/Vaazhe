@@ -271,7 +271,7 @@ struct StudyPlanner {
     let practicedCards: [Card]
     let difficultCards: [Card]
     let masteredCards: [Card]
-    private let cardsIntroducedToday: [Card]
+    let cardsIntroducedToday: [Card]
 
     init(cards: [Card], progress: [String: Progress], goal: Int,
          at date: Date, calendar: Calendar, recalls: [Recall] = [],
