@@ -55,8 +55,12 @@ struct CollectionView: View {
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.word).font(.system(.title3, design: .serif))
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .environment(\.layoutDirection, .leftToRight)
                 Text(card.meaningFa).font(PersianFont.subheadline).foregroundStyle(Palette.muted)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.vertical, 4)
         }

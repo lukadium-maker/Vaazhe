@@ -1,5 +1,6 @@
 import AVFoundation
 import UIKit
+import Observation
 
 enum EnglishAccent: String, CaseIterable {
     case american = "en-US"
@@ -31,7 +32,7 @@ enum EnglishAccent: String, CaseIterable {
     }
 }
 
-@MainActor final class PronunciationService: NSObject, AVSpeechSynthesizerDelegate {
+@MainActor @Observable final class PronunciationService: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = PronunciationService()
 
     enum PlaybackError: Error {
@@ -46,6 +47,34 @@ enum EnglishAccent: String, CaseIterable {
                 "پخش صدا ممکن نشد. پس از پایان تماس یا وقفهٔ صوتی، دوباره امتحان کن."
             }
         }
+    }
+
+    enum PlaybackState { case ready, playing, paused, finished }
+
+    private var playbackOwner: UUID?
+    private var finishedOwner: UUID?
+    private var paused = false
+
+    func playbackState(for owner: UUID) -> PlaybackState {
+        if playbackOwner == owner { return paused ? .paused : .playing }
+        return finishedOwner == owner ? .finished : .ready
+    }
+
+    func pause(for owner: UUID) {
+        guard playbackOwner == owner, !paused else { return }
+        if synthesizer.pauseSpeaking(at: .immediate) { paused = true }
+    }
+
+    func resume(for owner: UUID) {
+        guard playbackOwner == owner, paused else { return }
+        if synthesizer.continueSpeaking() { paused = false }
+    }
+
+    func stop(for owner: UUID) {
+        if finishedOwner == owner { finishedOwner = nil }
+        guard playbackOwner == owner else { return }
+        cancelUtterance()
+        releaseSession()
     }
 
     private let synthesizer = AVSpeechSynthesizer()
@@ -67,7 +96,7 @@ enum EnglishAccent: String, CaseIterable {
                                   name: UIApplication.didEnterBackgroundNotification, object: nil)
     }
 
-    func speak(_ text: String, accent: EnglishAccent, slowly: Bool) throws(PlaybackError) {
+    func speak(_ text: String, accent: EnglishAccent, slowly: Bool, owner: UUID? = nil) throws(PlaybackError) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
@@ -96,19 +125,17 @@ enum EnglishAccent: String, CaseIterable {
         utterance.rate = slowly
             ? max(AVSpeechUtteranceMinimumSpeechRate, AVSpeechUtteranceDefaultSpeechRate * 0.72)
             : AVSpeechUtteranceDefaultSpeechRate
+        playbackOwner = owner
+        finishedOwner = nil
         currentUtterance = utterance
         synthesizer.speak(utterance)
-    }
-
-    func stop(ifSpeaking text: String) {
-        guard currentUtterance?.speechString == text.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-        cancelUtterance()
-        releaseSession()
     }
 
     private func cancelUtterance() {
         guard currentUtterance != nil else { return }
         currentUtterance = nil
+        playbackOwner = nil
+        paused = false
         synthesizer.stopSpeaking(at: .immediate)
     }
 
@@ -136,17 +163,20 @@ enum EnglishAccent: String, CaseIterable {
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        endPlayback(for: ObjectIdentifier(utterance))
+        endPlayback(for: ObjectIdentifier(utterance), finished: true)
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        endPlayback(for: ObjectIdentifier(utterance))
+        endPlayback(for: ObjectIdentifier(utterance), finished: false)
     }
 
-    nonisolated private func endPlayback(for id: ObjectIdentifier) {
+    nonisolated private func endPlayback(for id: ObjectIdentifier, finished: Bool) {
         Task { @MainActor [weak self] in
             // A callback from a replaced utterance must not deactivate the new one.
             guard let self, let current = currentUtterance, ObjectIdentifier(current) == id else { return }
+            finishedOwner = finished ? playbackOwner : nil
+            playbackOwner = nil
+            paused = false
             currentUtterance = nil
             releaseSession()
         }

@@ -9,13 +9,16 @@ import UIKit
     private let readingContainer: ModelContainer?
     private let practiceContainer: ModelContainer?
     private let stories: [ReadingStory]
+    private let passageIndex: ReadingPassageIndex
     @State private var clock: AppClock
 
     init() {
         container = try? ModelContainer(for: PersonalCard.self, ReviewState.self, ReviewEvent.self)
         let deck = try? Card.load()
         self.deck = deck
-        stories = deck.flatMap { try? ReadingContent.load(cards: $0) } ?? []
+        let stories = deck.flatMap { try? ReadingContent.load(cards: $0) } ?? []
+        self.stories = stories
+        passageIndex = ReadingPassageIndex(stories: stories, cards: deck ?? [])
         readingContainer = try? ReadingStore.makeContainer()
         practiceContainer = try? PracticeStore.makeContainer()
         let clock = AppClock()
@@ -68,10 +71,10 @@ import UIKit
 
     private func library(vocabulary: ModelContainer, reading: ModelContainer?, practice: ModelContainer?) -> some View {
         #if DEBUG
-        Library(deck: deck, stories: stories, readingContainer: reading, practiceContainer: practice, startSimulation: startSimulation)
+        Library(deck: deck, stories: stories, passageIndex: passageIndex, readingContainer: reading, practiceContainer: practice, startSimulation: startSimulation)
             .modelContainer(vocabulary)
         #else
-        Library(deck: deck, stories: stories, readingContainer: reading, practiceContainer: practice)
+        Library(deck: deck, stories: stories, passageIndex: passageIndex, readingContainer: reading, practiceContainer: practice)
             .modelContainer(vocabulary)
         #endif
     }
@@ -96,6 +99,7 @@ struct Library: View {
 
     let deck: [Card]?
     let stories: [ReadingStory]
+    let passageIndex: ReadingPassageIndex
     let readingContainer: ModelContainer?
     let practiceContainer: ModelContainer?
     #if DEBUG
@@ -164,15 +168,17 @@ struct Library: View {
             if let readingContainer {
                 ReadingLibrary(stories: stories,
                                cards: Dictionary(uniqueKeysWithValues: (deck ?? []).map { ($0.id, $0) }),
-                               statuses: planner.status, dailyStoryID: dailyReading?.day == day ? dailyReading?.storyID : nil,
-                               isRevision: dailyReading?.isRevision == true, now: now, initialStoryID: presentation.storyID,
+                               statuses: planner.status, passageIndex: passageIndex,
+                               encountered: encounteredReadingIDs(at: now), dailyStoryID: dailyReading?.day == day ? dailyReading?.storyID : nil,
+                               isRevision: dailyReading?.isRevision == true, now: now,
+                               familiarity: dailyStoryFamiliarity(for: day), initialStoryID: presentation.storyID,
                                positions: $readingPositions)
                     .modelContainer(readingContainer)
             }
         }
         #if DEBUG
         .sheet(isPresented: $showsDeveloperMenu) {
-            DeveloperMenu(deck: deck ?? [], stories: stories, readingContainer: readingContainer,
+            DeveloperMenu(deck: deck ?? [], stories: stories, passageIndex: passageIndex, readingContainer: readingContainer,
                           startSimulation: startSimulation, onReadingChange: {
                 readingRevision += 1
                 if selection == .today { refreshDailyReading(at: clock.now, calendar: clock.calendar) }
@@ -314,7 +320,6 @@ struct Library: View {
                        dailyProgress: DailyLearningProgress) -> some View {
         let next = todayMessage(for: planner)
         return Page(avoidsFloatingTabBar: true, density: .compact) {
-            TodayHeader(date: date, timeZone: clock.calendar.timeZone)
             #if DEBUG
             if let simulation = clock.simulation {
                 Button {
@@ -337,12 +342,20 @@ struct Library: View {
                     withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { welcomeVisible = true }
                 }
             dailyPlanPanel(planner, progress: dailyProgress)
-            readingPanel(for: day, planner: planner)
+            readingPanel(for: day)
             playgroundEntry(planner, afterDailyWork: planner.completedCoreToday || readingCompleted(on: day))
 
             if deck == nil {
                 Label("مجموعهٔ اصلی بارگیری نشد. واژه‌های شخصی در دسترس‌اند.", systemImage: "exclamationmark.circle")
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TodayHeader(date: date, timeZone: clock.calendar.timeZone)
+                .frame(maxWidth: 560)
+                .padding(.horizontal, 20)
+                .padding(.vertical, DashboardMetrics.inline)
+                .frame(maxWidth: .infinity)
+                .background(Palette.paper)
         }
     }
 
@@ -362,7 +375,8 @@ struct Library: View {
             let planner = makePlanner(at: date, recalls: recalls, calendar: calendar)
             let assignment = try ReadingStore.dailyAssignment(stories: stories, planner: planner,
                                                        progress: stateByID.mapValues(\.progress), recalls: recalls,
-                                                       records: records, at: date, calendar: calendar, in: context)
+                                                       records: records, at: date, calendar: calendar, in: context,
+                                                       passageIndex: passageIndex)
             dailyReading = (day, assignment?.storyID, assignment?.isRevision == true)
         } catch {
             if dailyReading?.day != day { dailyReading = (day, nil, false) }
@@ -374,15 +388,22 @@ struct Library: View {
         reading = ReadingPresentation(storyID: storyID)
     }
 
+    private func encounteredReadingIDs(at date: Date) -> Set<String> {
+        Set(states.filter { $0.introduced <= date }.map(\.cardID))
+    }
+
+    private func dailyStoryFamiliarity(for day: ReadingDay) -> ReadingFamiliarity? {
+        guard dailyReading?.day == day, let storyID = dailyReading?.storyID,
+              let story = stories.first(where: { $0.id == storyID }) else { return nil }
+        return passageIndex.familiarity(for: story, encountered: encounteredReadingIDs(at: now))
+    }
+
     @ViewBuilder
-    private func readingPanel(for day: ReadingDay, planner: StudyPlanner) -> some View {
+    private func readingPanel(for day: ReadingDay) -> some View {
         if readingContainer != nil, let dailyReading, dailyReading.day == day,
-           let story = stories.first(where: { $0.id == dailyReading.storyID }) {
-            let count = story.targetWordIds.filter { id in
-                guard let status = planner.status[id] else { return false }
-                return status.stage != .new
-            }.count
-            ReadingRecommendationCard(story: story, matchingVocabularyCount: count,
+           let story = stories.first(where: { $0.id == dailyReading.storyID }),
+           let familiarity = dailyStoryFamiliarity(for: day) {
+            ReadingRecommendationCard(story: story, familiarity: familiarity,
                                       record: readingRecords[story.id],
                                       hasReadingPosition: (readingPositions[story.id] ?? 0) > 0,
                                       isRevision: dailyReading.isRevision,
@@ -465,14 +486,14 @@ struct Library: View {
                     counts, planner.introducedToday > 0 || planner.reviewedToday > 0 ? "ادامهٔ یادگیری" : "شروع یادگیری")
         }
         if planner.completedCoreToday {
-            return ("آفرین! تمرین پیشنهادی امروز کامل شد",
-                    "اگر دوست داری، می‌تونی به مرور یا بازی با واژه‌ها ادامه بدی.",
-                    planner.dueCards.isEmpty ? "بریم بازی کنیم" : "مرور بیشتر")
+            return ("آفرین! هدف امروزت رو کامل کردی.",
+                    "امروز هم یک قدم به انگلیسی بهتر نزدیک‌تر شدی.",
+                    planner.dueCards.isEmpty ? nil : "مرور بیشتر")
         }
         if planner.remainingNew == 0 && planner.introducedCount > 0 {
             return ("همهٔ واژه‌های موجود را یاد گرفتی!",
                     "حالا می‌تونی دانسته‌هات رو با مرور و بازی محکم‌تر کنی.",
-                    planner.dueCards.isEmpty ? "بریم بازی کنیم" : "مرور بیشتر")
+                    planner.dueCards.isEmpty ? nil : "مرور بیشتر")
         }
         if !planner.dueCards.isEmpty {
             return ("واژه‌هایی برای مرور آماده‌اند", "هر وقت خواستی، با یک دور کوتاه شروع کن.", "مرور بیشتر")
@@ -483,7 +504,7 @@ struct Library: View {
         case .browse:
             return ("مجموعه‌ات را بساز", "یک واژه با معنی فارسی اضافه کن تا تمرین را شروع کنی.", "رفتن به واژه‌ها")
         default:
-            return ("برای امروز آماده‌ای", "هر وقت خواستی، واژه‌های آشنا را تمرین کن.", "بریم بازی کنیم")
+            return ("برای امروز آماده‌ای", "هر وقت خواستی، واژه‌های آشنا را تمرین کن.", nil)
         }
     }
 

@@ -97,7 +97,9 @@ enum ReadingVocabulary {
     // Explicit forms are limited to the supplied passages and unambiguous variants
     // of their targets. A token must match a complete form of a target headword.
     private static let aliases: [String: [String]] = [
-        "arrive": ["arrives", "arrived"], "leave": ["leaves", "left"],
+        "arrive": ["arrives", "arrived", "arriving"], "leave": ["leaves", "left", "leaving"],
+        "meet": ["meets", "met", "meeting"], "wait": ["waits", "waited", "waiting"],
+        "ticket": ["tickets"], "stop": ["stops", "stopped", "stopping"],
         "bring": ["brings", "brought"], "open": ["opens"], "close": ["closes"],
         "need": ["needs"], "pay": ["pays", "paid"], "prefer": ["prefers"],
         "serve": ["serves"], "offer": ["offers"], "change": ["changes"],
@@ -109,7 +111,14 @@ enum ReadingVocabulary {
         "recommend": ["recommends"], "tend": ["tends"], "habit": ["habits"],
         "ask": ["asks"], "show": ["shows"], "walk": ["walks"], "pick": ["picks"],
         "throw": ["throws"], "drop": ["drops"], "catch": ["catches"], "fall": ["fallen"],
-        "push": ["pushes"], "sit": ["sits"], "student": ["students"], "laugh": ["laughs"]
+        "push": ["pushes"], "sit": ["sits", "sat"], "student": ["students"], "laugh": ["laughs"],
+        "morning": ["mornings"], "week": ["weeks"], "start": ["starts", "started"],
+        "explain": ["explains"], "look": ["looks", "looked", "looking"], "try": ["tries", "tried"],
+        "make": ["makes", "made"], "go": ["goes", "went"], "friend": ["friends"],
+        "say": ["says", "said"], "tell": ["tells", "told"], "find": ["finds", "found"],
+        "see": ["sees", "saw"], "put": ["puts"], "take": ["takes", "took"],
+        "write": ["writes", "wrote"], "know": ["knows"], "feel": ["feels", "felt"],
+        "book": ["books"], "word": ["words"], "vegetable": ["vegetables"]
     ]
 
     // These editorial targets appear as nouns, while the deck defines the verb.
@@ -129,16 +138,69 @@ enum ReadingVocabulary {
         return Set([headword] + (aliases[headword] ?? []))
     }
 
-    static func matches(in story: ReadingStory) -> [(range: Range<String.Index>, id: String)] {
-        var idsByForm: [String: String] = [:]
-        for (id, word) in zip(story.targetWordIds, story.targetWords) where id != nounUses[story.id] {
+    static func matchesTeachingSense(_ id: String, in story: ReadingStory) -> Bool {
+        id != nounUses[story.id]
+    }
+
+    struct Match {
+        let range: Range<String.Index>
+        let id: String
+    }
+
+    static func formIndex(_ vocabulary: [(id: String, word: String)]) -> [String: Set<String>] {
+        var candidates: [String: Set<String>] = [:]
+        for (id, word) in vocabulary {
             for form in forms(for: word) {
-                idsByForm[form] = id
+                candidates[form, default: []].insert(id)
             }
         }
-        return tokens(in: story.textEn).compactMap { range in
-            idsByForm[story.textEn[range].lowercased()].map { (range, $0) }
+        return candidates
+    }
+
+    static func matches(in story: ReadingStory) -> [Match] {
+        matches(in: story, candidates: formIndex(Array(zip(story.targetWordIds, story.targetWords))))
+    }
+
+    static func matches(in story: ReadingStory, candidates: [String: Set<String>]) -> [Match] {
+        tokens(in: story.textEn).compactMap { range in
+            let form = story.textEn[range].lowercased()
+            guard let ids = candidates[form], ids.count == 1, let id = ids.first,
+                  matchesTeachingSense(id, in: story) else { return nil }
+            return Match(range: range, id: id)
         }
+    }
+}
+
+struct ReadingFamiliarity {
+    let passageIDs: Set<String>
+    let familiarPassageIDs: Set<String>
+    let familiarTargetIDs: Set<String>
+
+    var rankingBonus: Int {
+        guard !passageIDs.isEmpty else { return 0 }
+        return 12 * familiarPassageIDs.count / passageIDs.count
+    }
+}
+
+struct ReadingPassageIndex {
+    private let matchesByStory: [String: [ReadingVocabulary.Match]]
+
+    init(stories: [ReadingStory] = [], cards: [Card] = []) {
+        let candidates = ReadingVocabulary.formIndex(cards.map { ($0.id, $0.word) })
+        matchesByStory = Dictionary(uniqueKeysWithValues: stories.map {
+            ($0.id, ReadingVocabulary.matches(in: $0, candidates: candidates))
+        })
+    }
+
+    func matches(for story: ReadingStory) -> [ReadingVocabulary.Match] {
+        matchesByStory[story.id] ?? ReadingVocabulary.matches(in: story)
+    }
+
+    func familiarity(for story: ReadingStory, encountered: Set<String>) -> ReadingFamiliarity {
+        let passage = Set(matches(for: story).map(\.id))
+        let familiar = passage.intersection(encountered)
+        return ReadingFamiliarity(passageIDs: passage, familiarPassageIDs: familiar,
+                                  familiarTargetIDs: familiar.intersection(story.targetWordIds))
     }
 }
 
@@ -223,19 +285,22 @@ enum ReadingRecommendationEngine {
     static func recommend(stories: [ReadingStory], statuses: [String: VocabularyStatus],
                           progress: [String: StudyPlanner.Progress], recalls: [Recall],
                           records: [String: ReadingRecord], at now: Date,
-                          calendar: Calendar = .current, previousStoryID: String? = nil) -> Recommendation? {
+                          calendar: Calendar = .current, previousStoryID: String? = nil,
+                          passageIndex: ReadingPassageIndex = ReadingPassageIndex()) -> Recommendation? {
         let recentCutoff = calendar.date(byAdding: .day, value: -7, to: now) ?? now
         let recentIDs = Set(recalls.filter { (recentCutoff...now).contains($0.date) }.map(\.cardID))
             .union(progress.filter { (recentCutoff...now).contains($0.value.introduced) }.keys)
 
-        let vocabularySize = progress.values.filter { $0.introduced <= now }.count
+        let encountered = Set(progress.filter { $0.value.introduced <= now }.keys)
+        let vocabularySize = encountered.count
         let targetLevel: ReadingLevel = vocabularySize >= 90 ? .b1 : vocabularySize >= 40 ? .a2 : .a1
         let allCompleted = !stories.isEmpty && stories.allSatisfy {
             let record = records[$0.id]
             return record?.completed == true && record?.lastCompletion.map { $0 <= now } != false
         }
         let scored = stories.map { story in
-            let matches = story.targetWordIds.filter { progress[$0].map { $0.introduced <= now } == true }
+            let familiarity = passageIndex.familiarity(for: story, encountered: encountered)
+            let matches = story.targetWordIds.filter { familiarity.familiarTargetIDs.contains($0) }
             let vocabularyScore = matches.reduce(0) { score, id in
                 let status = statuses[id]
                 return score + (status?.stage == .mastered ? 1 : 3) +
@@ -246,7 +311,7 @@ enum ReadingRecommendationEngine {
             let penalty = (record?.read == true ? 2 : 0) + (record?.completed == true ? 1 : 0)
                 + (recentlyCompleted ? 5 : 0)
             let recommendation = Recommendation(storyID: story.id, matchingVocabularyIDs: matches,
-                                                score: vocabularyScore + (story.level == targetLevel ? 4 : 0) +
+                                                score: vocabularyScore + familiarity.rankingBonus + (story.level == targetLevel ? 4 : 0) +
                                                     (targetLevel == .a1 ? story.level.beginnerPriority : 0) - penalty)
             return (story: story, result: recommendation)
         }

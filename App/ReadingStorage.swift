@@ -68,15 +68,17 @@ import SwiftData
     static func dailyStoryID(stories: [ReadingStory], planner: StudyPlanner,
                              progress: [String: StudyPlanner.Progress], recalls: [Recall],
                              records: [String: ReadingRecord], at date: Date,
-                             calendar: Calendar, in context: ModelContext) throws -> String? {
+                             calendar: Calendar, in context: ModelContext,
+                             passageIndex: ReadingPassageIndex = ReadingPassageIndex()) throws -> String? {
         try dailyAssignment(stories: stories, planner: planner, progress: progress, recalls: recalls,
-                            records: records, at: date, calendar: calendar, in: context)?.storyID
+                            records: records, at: date, calendar: calendar, in: context, passageIndex: passageIndex)?.storyID
     }
 
     static func dailyAssignment(stories: [ReadingStory], planner: StudyPlanner,
                                 progress: [String: StudyPlanner.Progress], recalls: [Recall],
                                 records: [String: ReadingRecord], at date: Date,
-                                calendar: Calendar, in context: ModelContext) throws -> DailyReadingPick? {
+                                calendar: Calendar, in context: ModelContext,
+                             passageIndex: ReadingPassageIndex = ReadingPassageIndex()) throws -> DailyReadingPick? {
         let day = ReadingDay(at: date, calendar: calendar)
         let start = calendar.startOfDay(for: date)
         var available = Set(stories.map(\.id))
@@ -89,7 +91,7 @@ import SwiftData
         let id = try dailyStoryID(at: date, calendar: calendar, availableIDs: available, in: context) { previousID in
             ReadingRecommendationEngine.recommend(
                 stories: stories.filter { available.contains($0.id) }, statuses: planner.status, progress: progress,
-                recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID
+                recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID, passageIndex: passageIndex
             )?.storyID
         }
         guard let id, let assignment = try pick(for: day, in: context) else { return nil }
