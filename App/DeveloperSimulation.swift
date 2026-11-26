@@ -119,7 +119,7 @@ import SwiftData
                 }
             }
             for pick in try source.reading.fetch(FetchDescriptor<DailyReadingPick>()) {
-                destination.insert(DailyReadingPick(dayKey: pick.dayKey, storyID: pick.storyID, isRevision: pick.isRevision))
+                destination.insert(DailyReadingPick(dayKey: pick.dayKey, storyID: pick.storyID, isRevision: pick.isRevision, isLocked: pick.isLocked))
             }
             if let practice {
                 for record in try practice.fetch(FetchDescriptor<PracticeSessionRecord>()) {

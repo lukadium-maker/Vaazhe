@@ -11,6 +11,8 @@ enum Palette {
     static let learningProgress = adaptive(0x829477, 0x788F72)
     static let mascotGreen = adaptive(0x254936, 0x88B39A)
     static let celebrationGold = adaptive(0x9A7138, 0xDAB277)
+    static let readingToday = adaptive(0x995200, 0xFFC078)
+    static let readingFamiliar = adaptive(0x146239, 0x8AD9A6)
     static let sage = adaptive(0x465741, 0xBAC9AF)
     static let tint = adaptive(0xE1E7DA, 0x323C30)
     static let buttonText = adaptive(0xFFFFFF, 0x212B20)
@@ -438,7 +440,9 @@ struct CardContent: View {
 
     private func speak(_ text: String, accent: EnglishAccent) {
         do {
-            try PronunciationService.shared.speak(text, accent: accent, slowly: slowPronunciation)
+            try PronunciationService.shared.speak(text, accent: accent, slowly: slowPronunciation) {
+                playbackError = $0
+            }
         } catch {
             playbackError = error
         }

@@ -11,6 +11,7 @@ struct ReadingLibrary: View {
     let statuses: [String: VocabularyStatus]
     let passageIndex: ReadingPassageIndex
     let encountered: Set<String>
+    let introducedToday: Set<String>
     let dailyStoryID: String?
     let familiarity: ReadingFamiliarity?
     let isRevision: Bool
@@ -25,13 +26,15 @@ struct ReadingLibrary: View {
     @Environment(AppClock.self) private var clock
 
     init(stories: [ReadingStory], cards: [String: Card], statuses: [String: VocabularyStatus],
-         passageIndex: ReadingPassageIndex, encountered: Set<String>, dailyStoryID: String?, isRevision: Bool, now: Date,
+         passageIndex: ReadingPassageIndex, encountered: Set<String>, introducedToday: Set<String>,
+         dailyStoryID: String?, isRevision: Bool, now: Date,
          familiarity: ReadingFamiliarity?, initialStoryID: String?, positions: Binding<[String: Double]>) {
         self.stories = stories
         self.cards = cards
         self.statuses = statuses
         self.passageIndex = passageIndex
         self.encountered = encountered
+        self.introducedToday = introducedToday
         self.dailyStoryID = dailyStoryID
         self.familiarity = familiarity
         self.isRevision = isRevision
@@ -88,7 +91,8 @@ struct ReadingLibrary: View {
                     if let story = stories.first(where: { $0.id == id }) {
                         ReadingPassageView(story: story, cards: cards, statuses: statuses,
                                            matches: passageIndex.matches(for: story),
-                                           familiarIDs: passageIndex.familiarity(for: story, encountered: encountered).familiarPassageIDs,
+                                           familiarity: passageIndex.familiarity(for: story, encountered: encountered,
+                                                                                introducedToday: introducedToday),
                                            hasRead: records[id]?.read == true,
                                            position: Binding(get: { positions[id, default: 0] },
                                                              set: { positions[id] = $0 })) {
@@ -97,8 +101,8 @@ struct ReadingLibrary: View {
                     }
                 case .quiz(let id):
                     if let story = stories.first(where: { $0.id == id }) {
-                        let passageIDs = Set(passageIndex.matches(for: story).map(\.id))
-                        let vocabulary = story.targetWordIds.filter { passageIDs.contains($0) }.compactMap { cards[$0] }
+                        let familiarTargets = passageIndex.familiarity(for: story, encountered: encountered).familiarTargetIDs
+                        let vocabulary = story.targetWordIds.filter { familiarTargets.contains($0) }.compactMap { cards[$0] }
                         ReadingQuizView(story: story, vocabulary: vocabulary,
                                         reread: { _ = path.popLast() },
                                         returnToLibrary: { path.removeAll() })
@@ -237,7 +241,7 @@ struct ReadingRecommendationCard: View {
                     .fixedSize(horizontal: true, vertical: false)
                 VStack(alignment: .leading, spacing: DashboardMetrics.micro) { todayStoryMetadata }
             }
-            passageFamiliarityLabel.font(DashboardFont.metadata)
+            vocabularyCounts.font(DashboardFont.metadata)
         }
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -288,6 +292,7 @@ struct ReadingRecommendationCard: View {
                 HStack(spacing: 10) { metadata }.fixedSize(horizontal: true, vertical: false)
                 VStack(alignment: .leading, spacing: 4) { metadata }
             }
+            vocabularyCounts.font(PersianFont.subheadline)
             if isRevision {
                 Text("همهٔ داستان‌ها را خوانده‌ای. این داستان برای مرور واژه‌هاست.")
                     .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
@@ -300,9 +305,18 @@ struct ReadingRecommendationCard: View {
         .modifier(Panel(padding: 16))
     }
 
-    private var passageFamiliarityLabel: some View {
-        Text("\(fa(familiarity.familiarPassageIDs.count)) واژهٔ آشنا در متن")
-            .foregroundStyle(Palette.muted)
+    private var vocabularyCounts: some View {
+        VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
+            if !familiarity.todayPassageIDs.isEmpty {
+                Text("\(fa(familiarity.todayPassageIDs.count)) واژه از درس امروز")
+                    .foregroundStyle(ReadingVocabulary.Highlight.today.color)
+            }
+            if !familiarity.previouslyStudiedPassageIDs.isEmpty {
+                Text("\(fa(familiarity.previouslyStudiedPassageIDs.count)) واژهٔ آشنا از روزهای گذشته")
+                    .foregroundStyle(ReadingVocabulary.Highlight.familiar.color)
+            }
+
+        }
     }
 
     private var heading: some View {
@@ -349,10 +363,6 @@ struct ReadingRecommendationCard: View {
         Text(inLibrary ? "\(fa(story.questions.count)) پرسش • حدود \(fa(story.readingMinutes)) دقیقه"
              : "حدود \(fa(story.readingMinutes)) دقیقه")
             .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-        if !familiarity.passageIDs.isEmpty {
-            passageFamiliarityLabel
-                .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-        }
     }
 }
 
@@ -414,7 +424,7 @@ private struct ReadingPassageView: View {
     let cards: [String: Card]
     let statuses: [String: VocabularyStatus]
     let matches: [ReadingVocabulary.Match]
-    let familiarIDs: Set<String>
+    let familiarity: ReadingFamiliarity
     let hasRead: Bool
     @Binding var position: Double
     let startQuiz: () -> Void
@@ -464,8 +474,8 @@ private struct ReadingPassageView: View {
                 translationPanel(translation)
             }
 
-            vocabularyGroup("واژه‌های آشنا در متن", ids: matches.map(\.id).filter { familiarIDs.contains($0) })
-            vocabularyGroup("واژه‌های هدف داستان", ids: story.targetWordIds.filter { !familiarIDs.contains($0) })
+            vocabularyGroup("واژه‌های درس امروز", category: .today)
+            vocabularyGroup("واژه‌های آشنا از روزهای گذشته", category: .familiar)
 
             Button("شروع آزمون درک مطلب") {
                 if recordRead() { startQuiz() }
@@ -477,6 +487,13 @@ private struct ReadingPassageView: View {
             }
         }
         .persianNavigationTitle("داستان")
+        .onAppear {
+            do {
+                try ReadingStore.lockDailyStory(story.id, at: clock.now, calendar: clock.calendar, in: context)
+            } catch {
+                errorMessage = "ذخیرهٔ داستان امروز ممکن نشد."
+            }
+        }
         .onDisappear { audio.stop(for: audioOwner) }
         .sheet(item: $definition) { card in
             ReadingDefinition(card: card, status: statuses[card.id])
@@ -488,17 +505,21 @@ private struct ReadingPassageView: View {
         let state = audio.playbackState(for: audioOwner)
         let label: (String, String) = switch state {
         case .ready: ("پخش داستان", "play.fill")
+        case .preparing: ("در حال آماده‌سازی صدا", "speaker.wave.2")
         case .playing: ("توقف موقت", "pause.fill")
         case .paused: ("ادامهٔ پخش", "play.fill")
         case .finished: ("پخش دوباره", "arrow.counterclockwise")
         }
         return Button {
             switch state {
+            case .preparing: break
             case .playing: audio.pause(for: audioOwner)
             case .paused: audio.resume(for: audioOwner)
             case .ready, .finished:
                 do throws(PronunciationService.PlaybackError) {
-                    try audio.speak(story.textEn, accent: .preferred(voice), slowly: slowPronunciation, owner: audioOwner)
+                    try audio.speak(story.textEn, accent: .preferred(voice), slowly: slowPronunciation, owner: audioOwner) {
+                        errorMessage = $0.message
+                    }
                 } catch {
                     errorMessage = error.message
                 }
@@ -512,13 +533,17 @@ private struct ReadingPassageView: View {
         .font(PersianFont.emphasis)
         .foregroundStyle(Palette.sage)
         .modifier(Panel(fill: state == .playing ? Palette.tint : Palette.card, padding: 4))
+        .disabled(state == .preparing)
         .accessibilityValue(state == .playing ? "در حال پخش" : "")
     }
 
     @ViewBuilder
-    private func vocabularyGroup(_ title: String, ids: [String]) -> some View {
+    private func vocabularyGroup(_ title: String, category: ReadingVocabulary.Highlight) -> some View {
         var seen = Set<String>()
-        let vocabulary = ids.filter { seen.insert($0).inserted }.compactMap { cards[$0] }
+        let vocabulary = matches.compactMap { match -> Card? in
+            guard familiarity.highlight(for: match.id) == category, seen.insert(match.id).inserted else { return nil }
+            return cards[match.id]
+        }
         if !vocabulary.isEmpty {
             DisclosureGroup(title) {
                 ForEach(vocabulary) { card in
@@ -534,7 +559,7 @@ private struct ReadingPassageView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .font(PersianFont.emphasis).foregroundStyle(Palette.sage)
+            .font(PersianFont.emphasis).foregroundStyle(category.color)
         }
     }
 
@@ -574,13 +599,16 @@ private struct ReadingPassageView: View {
     private var linkedPassage: AttributedString {
         var text = AttributedString()
         var start = story.textEn.startIndex
-        for match in matches where familiarIDs.contains(match.id) {
+        for match in matches {
             let (range, id) = (match.range, match.id)
+            guard let category = familiarity.highlight(for: id) else {
+                continue
+            }
             text += AttributedString(String(story.textEn[start..<range.lowerBound]))
             var word = AttributedString(String(story.textEn[range]))
             word.link = URL(string: "elphy-word://\(id)")
-            word.foregroundColor = Palette.sage
-            word.underlineStyle = .single
+            word.foregroundColor = category.color
+            word.underlineStyle = category.underline
             text += word
             start = range.upperBound
         }
@@ -758,6 +786,23 @@ private extension View {
             Button("باشه", role: .cancel) {}
         } message: {
             Text(message.wrappedValue ?? "")
+        }
+    }
+}
+
+
+private extension ReadingVocabulary.Highlight {
+    var color: Color {
+        switch self {
+        case .today: Palette.readingToday
+        case .familiar: Palette.readingFamiliar
+        }
+    }
+
+    var underline: Text.LineStyle {
+        switch self {
+        case .today: Text.LineStyle(pattern: .solid, color: color)
+        case .familiar: Text.LineStyle(pattern: .dot, color: color)
         }
     }
 }

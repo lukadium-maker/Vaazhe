@@ -33,40 +33,115 @@ enum TapCue: String {
     }
 }
 
+@MainActor enum PlaybackAudioSession {
+    private static var transition: Task<Void, Never>?
+
+    static func activate(mode: AVAudioSession.Mode, options: AVAudioSession.CategoryOptions,
+                         completion: @escaping @MainActor (Bool) -> Void) {
+        let previous = transition
+        transition = Task {
+            await previous?.value
+            let succeeded = await Task.detached {
+                let session = AVAudioSession.sharedInstance()
+                do {
+                    try session.setCategory(.playback, mode: mode, options: options)
+                    if #available(iOS 27, *) {
+                        return try await session.activate(options: [])
+                    }
+                    try session.setActive(true)
+                    return true
+                } catch {
+                    return false
+                }
+            }.value
+            completion(succeeded)
+        }
+    }
+
+    static func performPlayerOperation<Result: Sendable>(
+        _ operation: @escaping @Sendable () -> Result,
+        completion: @escaping @MainActor (Result) -> Void = { _ in }
+    ) {
+        let previous = transition
+        transition = Task {
+            await previous?.value
+            let result = await Task.detached { operation() }.value
+            completion(result)
+        }
+    }
+
+    static func deactivate() {
+        let previous = transition
+        transition = Task {
+            await previous?.value
+            await Task.detached {
+                let session = AVAudioSession.sharedInstance()
+                if #available(iOS 27, *) {
+                    _ = try? await session.deactivate(options: .notifyOthersOnDeactivation)
+                } else {
+                    try? session.setActive(false, options: .notifyOthersOnDeactivation)
+                }
+            }.value
+        }
+    }
+}
+
 @MainActor final class TapSoundPlayer {
     static let shared = TapSoundPlayer()
 
-    private let session = AVAudioSession.sharedInstance()
     private var players: [TapCue: AVAudioPlayer] = [:]
     private var activePlayer: AVAudioPlayer?
+    private var pendingActivation: UUID?
+    private var playbackRequest: UUID?
     private var finishTask: Task<Void, Never>?
 
     private init() {}
 
     func play(_ cue: TapCue) {
         guard let player = player(for: cue) else { return }
-        if activePlayer == nil {
-            do {
-                try session.setCategory(.playback, mode: .default, options: .mixWithOthers)
-                try session.setActive(true)
-            } catch { return }
-        }
-
         finishTask?.cancel()
-        activePlayer?.stop()
-        activePlayer = player
-        player.currentTime = 0
-        guard player.play() else {
-            stop()
-            return
+        playbackRequest = nil
+        if let activePlayer {
+            PlaybackAudioSession.performPlayerOperation { activePlayer.stop() }
         }
+        if activePlayer == nil {
+            let request = UUID()
+            pendingActivation = request
+            activePlayer = player
+            PlaybackAudioSession.activate(mode: .default, options: .mixWithOthers) { [weak self] succeeded in
+                guard let self, pendingActivation == request else { return }
+                pendingActivation = nil
+                guard succeeded, let activePlayer else {
+                    stop()
+                    return
+                }
+                start(activePlayer)
+            }
+        } else {
+            activePlayer = player
+            if pendingActivation == nil { start(player) }
+        }
+    }
 
-        finishTask = Task {
-            do {
-                try await Task.sleep(for: .seconds(player.duration + 0.05))
+    private func start(_ player: AVAudioPlayer) {
+        let request = UUID()
+        playbackRequest = request
+        PlaybackAudioSession.performPlayerOperation {
+            player.currentTime = 0
+            return player.play() ? player.duration : nil
+        } completion: { [weak self] (duration: TimeInterval?) in
+            guard let self, playbackRequest == request else { return }
+            guard let duration else {
                 stop()
-            } catch {
-                // A new cue or pronunciation took over.
+                return
+            }
+            finishTask = Task {
+                do {
+                    try await Task.sleep(for: .seconds(duration + 0.05))
+                    self.stop()
+                } catch {
+                    // A new cue or pronunciation took over.
+                }
             }
         }
     }
@@ -74,10 +149,12 @@ enum TapCue: String {
     func stop() {
         finishTask?.cancel()
         finishTask = nil
+        pendingActivation = nil
+        playbackRequest = nil
         guard let player = activePlayer else { return }
         activePlayer = nil
-        player.stop()
-        try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        PlaybackAudioSession.performPlayerOperation { player.stop() }
+        PlaybackAudioSession.deactivate()
     }
 
     private func player(for cue: TapCue) -> AVAudioPlayer? {

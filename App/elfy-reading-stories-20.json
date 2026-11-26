@@ -87,8 +87,8 @@
         "enjoy",
         "together"
       ],
-      "textEn": "It is Sunday, and Neda wants to cook breakfast for her father. She puts bread on the table and makes eggs. Her father brings fresh fruit from the kitchen. They drink tea and eat together. Neda asks about his week. He tells her a funny story, and they laugh. They enjoy a quiet morning at home before the day becomes busy.",
-      "textFa": "یکشنبه است و ندا می‌خواهد برای پدرش صبحانه درست کند. او نان را روی میز می‌گذارد و تخم‌مرغ درست می‌کند. پدرش از آشپزخانه میوهٔ تازه می‌آورد. آن‌ها چای می‌نوشند و با هم صبحانه می‌خورند. ندا از پدرش می‌پرسد هفته‌اش چطور گذشته است. پدرش داستان خنده‌داری برایش تعریف می‌کند و هر دو می‌خندند. پیش از آنکه روزشان شلوغ شود، از صبح آرامشان در خانه لذت می‌برند.",
+      "textEn": "It is Sunday, and Neda wants to cook breakfast for her father. Her father is already awake. She puts bread on the table, but there are no eggs. She goes next door to borrow two eggs. When she comes back, her father brings fresh fruit from the kitchen. Neda asks him to open the jar of jam. They drink tea and eat together. Her father tells a funny story. They agree to cook breakfast together next Sunday. They enjoy the quiet morning.",
+      "textFa": "یکشنبه است و ندا می‌خواهد برای پدرش صبحانه درست کند. پدرش بیدار شده است. ندا نان را روی میز می‌گذارد، اما تخم‌مرغی در خانه نیست. او به خانهٔ همسایه می‌رود تا دو تخم‌مرغ قرض بگیرد. وقتی برمی‌گردد، پدرش از آشپزخانه میوهٔ تازه می‌آورد. ندا از او می‌خواهد درِ شیشهٔ مربا را باز کند. آن‌ها چای می‌نوشند و با هم صبحانه می‌خورند. پدرش داستان خنده‌داری تعریف می‌کند. آن‌ها قرار می‌گذارند یکشنبهٔ بعد با هم صبحانه درست کنند. از صبح آرامشان لذت می‌برند.",
       "questions": [
         {
           "id": "q1",
@@ -150,8 +150,8 @@
         "close",
         "need"
       ],
-      "textEn": "Farid is ready to leave, but he cannot find his bag. He opens the bedroom door and looks under the bed. He checks the kitchen, too. His sister offers to help. “Try to remember where you sat last night,” she says. Farid goes to the sofa and sees his bag behind it. He closes the door and smiles. Now he only needs to find his shoes.",
-      "textFa": "فرید آمادهٔ رفتن است، اما کیفش را پیدا نمی‌کند. در اتاق‌خواب را باز می‌کند و زیر تخت را نگاه می‌کند. آشپزخانه را هم می‌گردد. خواهرش می‌گوید که می‌تواند کمکش کند. او می‌گوید: «سعی کن یادت بیاید دیشب کجا نشسته بودی.» فرید به سمت مبل می‌رود و کیفش را پشت آن می‌بیند. در را می‌بندد و لبخند می‌زند. حالا فقط باید کفش‌هایش را پیدا کند.",
+      "textEn": "Farid is almost ready to leave, but he cannot find his bag. At first, he looks for it alone. He opens the bedroom door and looks under the bed. He checks the kitchen, too. His sister offers to help. “I already looked in the kitchen,” he says. “Try to remember where you sat last night,” she says. Farid goes to the sofa and sees his bag behind it. He closes the door and smiles. Now he only needs to find his shoes.",
+      "textFa": "فرید تقریباً آمادهٔ رفتن است، اما کیفش را پیدا نمی‌کند. اول، به‌تنهایی دنبال کیفش می‌گردد. در اتاق‌خواب را باز می‌کند و زیر تخت را نگاه می‌کند. آشپزخانه را هم می‌گردد. خواهرش پیشنهاد می‌دهد کمکش کند. فرید می‌گوید: «آشپزخانه را قبلاً گشتم.» خواهرش می‌گوید: «سعی کن یادت بیاید دیشب کجا نشسته بودی.» فرید به سمت مبل می‌رود و کیفش را پشت آن می‌بیند. در را می‌بندد و لبخند می‌زند. حالا فقط باید کفش‌هایش را پیدا کند.",
       "questions": [
         {
           "id": "q1",
@@ -708,8 +708,8 @@
         "enough",
         "follow"
       ],
-      "textEn": "Omid wants to ride his bicycle, but a small part of it breaks. He takes it to a local repair shop. The mechanic checks the bicycle and explains that a new part is necessary. Omid does not have enough money today. The mechanic suggests a cheaper repair for now. He tells Omid to be careful and to follow his advice until the new part arrives.",
-      "textFa": "امید می‌خواهد دوچرخه‌سواری کند، اما قطعهٔ کوچکی از دوچرخه‌اش می‌شکند. دوچرخه را به تعمیرگاهی در محله می‌برد. تعمیرکار دوچرخه را بررسی می‌کند و توضیح می‌دهد که یک قطعهٔ جدید لازم است. امید امروز پول کافی ندارد. تعمیرکار پیشنهاد می‌دهد فعلاً تعمیر ارزان‌تری انجام دهد. به امید می‌گوید مراقب باشد و تا رسیدن قطعهٔ جدید به توصیه‌اش عمل کند.",
+      "textEn": "Omid wants to ride his bicycle, but a small part breaks. He has to carry the bicycle to a local repair shop. The mechanic checks it and points to the broken part. He explains that a new part is necessary. Omid asks to compare the prices of a new part and a temporary repair. The difference is clear, and Omid does not have enough money for the new part today. The mechanic suggests the cheaper repair for now. He tells Omid to be careful and to follow his advice until the new part arrives.",
+      "textFa": "امید می‌خواهد دوچرخه‌سواری کند، اما قطعهٔ کوچکی از دوچرخه‌اش می‌شکند. مجبور می‌شود دوچرخه را تا تعمیرگاهی در محله حمل کند. تعمیرکار دوچرخه را بررسی می‌کند و قطعهٔ شکسته را نشان می‌دهد. توضیح می‌دهد که یک قطعهٔ جدید لازم است. امید می‌خواهد قیمت قطعهٔ جدید را با هزینهٔ یک تعمیر موقت مقایسه کند. تفاوت قیمت‌ها واضح است و امید امروز پول کافی برای خرید قطعهٔ جدید ندارد. تعمیرکار پیشنهاد می‌دهد فعلاً تعمیر ارزان‌تر را انجام دهد. به امید می‌گوید مراقب باشد و تا رسیدن قطعهٔ جدید به توصیه‌اش عمل کند.",
       "questions": [
         {
           "id": "q1",
@@ -1138,8 +1138,8 @@
         "describe",
         "return"
       ],
-      "textEn": "A delivery worker brings a package to Hamed’s apartment. Hamed receives it but notices that the name on the box is different. He checks the address and sees that the package belongs to another building. He calls the shop to describe the mistake. The worker returns later and collects the box. The next day, Hamed receives his own package. He is glad he did not open the wrong one.",
-      "textFa": "یک مأمور تحویل بسته‌ای به آپارتمان حامد می‌آورد. حامد بسته را تحویل می‌گیرد، اما متوجه می‌شود نام روی جعبه با نام او فرق دارد. نشانی را بررسی می‌کند و می‌بیند بسته متعلق به ساختمان دیگری است. به فروشگاه زنگ می‌زند و اشتباه را توضیح می‌دهد. مأمور تحویل بعداً برمی‌گردد و جعبه را می‌برد. روز بعد، حامد بستهٔ خودش را تحویل می‌گیرد. خوشحال است که بستهٔ اشتباهی را باز نکرده است.",
+      "textEn": "A delivery worker brings a package to Hamed’s apartment. Hamed receives it but sees a different name on the box. He checks the address and sees that the package is for someone in another building. He calls the shop to describe the mistake. The reason is simple: the buildings have the same number, but they are on different streets. “I suggest you leave the box closed,” the person at the shop says. “The worker will return for it.” The worker comes back for the box. The next day, Hamed receives his own package.",
+      "textFa": "یک مأمور تحویل بسته‌ای به آپارتمان حامد می‌آورد. حامد بسته را تحویل می‌گیرد، اما نام دیگری روی جعبه می‌بیند. نشانی را بررسی می‌کند و می‌فهمد بسته برای کسی در ساختمان دیگری است. به فروشگاه زنگ می‌زند و اشتباه را توضیح می‌دهد. دلیلش ساده است: شمارهٔ دو ساختمان یکی است، اما در خیابان‌های متفاوتی قرار دارند. مسئول فروشگاه می‌گوید: «پیشنهاد می‌کنم جعبه را باز نکنید. مأمور تحویل برای گرفتنش برمی‌گردد.» مأمور برای گرفتن جعبه برمی‌گردد. روز بعد، حامد بستهٔ خودش را تحویل می‌گیرد.",
       "questions": [
         {
           "id": "q1",

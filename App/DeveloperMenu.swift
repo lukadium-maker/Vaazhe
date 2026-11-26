@@ -228,13 +228,26 @@ struct DeveloperMenu: View {
             LabeledContent("Today’s story", value: assignmentDay == simulation.day ? selectedStory?.titleEn ?? "None" : "Loading…")
             if assignmentDay == simulation.day, let selectedStory {
                 let encountered = Set(states.filter { $0.introduced <= simulation.date }.map(\.cardID))
-                let familiarity = passageIndex.familiarity(for: selectedStory, encountered: encountered)
-                LabeledContent("Familiar passage words", value: "\(familiarity.familiarPassageIDs.count) / \(familiarity.passageIDs.count)")
-                LabeledContent("Familiar targets", value: "\(familiarity.familiarTargetIDs.count) / \(selectedStory.targetWordIds.count)")
-                let words = deck.filter { familiarity.familiarPassageIDs.contains($0.id) }.map(\.word).sorted()
-                if !words.isEmpty { Text(words.joined(separator: ", ")).font(.footnote) }
-                Text("The saved story stays in place today. New picks weigh passage familiarity, reading level and target reinforcement.")
-                    .font(.footnote)
+                let introducedToday = Set(diagnostics.planner.cardsIntroducedToday.map(\.id))
+                let familiarity = passageIndex.familiarity(for: selectedStory, encountered: encountered,
+                                                          introducedToday: introducedToday)
+                LabeledContent("Today’s lesson matches", value: String(familiarity.todayPassageIDs.count))
+                LabeledContent("Previously studied matches", value: String(familiarity.previouslyStudiedPassageIDs.count))
+                DisclosureGroup("Story vocabulary matches") {
+                    ForEach(Array(passageIndex.matches(for: selectedStory).enumerated()), id: \.offset) { _, match in
+                        let category = switch familiarity.highlight(for: match.id) {
+                        case .today: "Today’s lesson"
+                        case .familiar: "Previously studied"
+                        case nil: "Unhighlighted"
+                        }
+                        LabeledContent {
+                            Text(category)
+                        } label: {
+                            Text(String(selectedStory.textEn[match.range]))
+                            Text(match.id).font(.caption)
+                        }
+                    }
+                }
             }
             LabeledContent("Vocabulary complete", value: diagnostics.vocabularyComplete ? "Yes" : "No")
             LabeledContent("Reading complete", value: diagnostics.readingComplete ? "Yes" : "No")

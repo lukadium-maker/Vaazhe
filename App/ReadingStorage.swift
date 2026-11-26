@@ -23,6 +23,7 @@ import SwiftData
     @Attribute(.unique) var dayKey: String
     var storyID: String
     var isRevision: Bool?
+    var isLocked: Bool?
 
     init(day: ReadingDay, storyID: String) {
         self.dayKey = day.key
@@ -30,10 +31,11 @@ import SwiftData
     }
 
     #if DEBUG
-    init(dayKey: String, storyID: String, isRevision: Bool? = nil) {
+    init(dayKey: String, storyID: String, isRevision: Bool? = nil, isLocked: Bool? = nil) {
         self.dayKey = dayKey
         self.storyID = storyID
         self.isRevision = isRevision
+        self.isLocked = isLocked
     }
     #endif
 }
@@ -78,7 +80,7 @@ import SwiftData
                                 progress: [String: StudyPlanner.Progress], recalls: [Recall],
                                 records: [String: ReadingRecord], at date: Date,
                                 calendar: Calendar, in context: ModelContext,
-                             passageIndex: ReadingPassageIndex = ReadingPassageIndex()) throws -> DailyReadingPick? {
+                                passageIndex: ReadingPassageIndex = ReadingPassageIndex()) throws -> DailyReadingPick? {
         let day = ReadingDay(at: date, calendar: calendar)
         let start = calendar.startOfDay(for: date)
         var available = Set(stories.map(\.id))
@@ -88,17 +90,37 @@ import SwiftData
            stories.contains(where: { records[$0.id]?.completed != true }) {
             available.remove(legacy.storyID)
         }
-        let id = try dailyStoryID(at: date, calendar: calendar, availableIDs: available, in: context) { previousID in
+        let introducedToday = Set(planner.cardsIntroducedToday.map(\.id))
+        let lessonIDs = introducedToday.union(planner.newCards.map(\.id))
+        func recommend(previousID: String?, lesson: Set<String>) -> ReadingRecommendationEngine.Recommendation? {
             ReadingRecommendationEngine.recommend(
                 stories: stories.filter { available.contains($0.id) }, statuses: planner.status, progress: progress,
-                recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID, passageIndex: passageIndex
-            )?.storyID
+                recalls: recalls, records: records, at: date, calendar: calendar, previousStoryID: previousID, passageIndex: passageIndex,
+                lessonIDs: lesson
+            )
+        }
+        let existingID = try pick(for: day, in: context)?.storyID
+        let id = try dailyStoryID(at: date, calendar: calendar, availableIDs: available, in: context) {
+            recommend(previousID: $0, lesson: lessonIDs)?.storyID
         }
         guard let id, let assignment = try pick(for: day, in: context) else { return nil }
-        if assignment.isRevision == nil {
-            assignment.isRevision = previousCompletion.contains(id)
-            try save(context)
+        if planner.reachedGoalToday, assignment.isLocked != true {
+            if existingID == id, !previousCompletion.contains(id), records[id]?.read != true,
+               let candidate = recommend(previousID: try previousStoryID(at: date, calendar: calendar, in: context),
+                                         lesson: introducedToday),
+               candidate.storyID != id, records[candidate.storyID]?.completed != true,
+               let current = stories.first(where: { $0.id == id }),
+               candidate.lessonOverlap >
+                passageIndex.familiarity(for: current, encountered: introducedToday).familiarPassageIDs.count {
+                assignment.storyID = candidate.storyID
+                assignment.isRevision = false
+            }
+            assignment.isLocked = true
         }
+        if assignment.isRevision == nil {
+            assignment.isRevision = previousCompletion.contains(assignment.storyID)
+        }
+        if context.hasChanges { try save(context) }
         return assignment
     }
 
@@ -108,17 +130,29 @@ import SwiftData
         let existing = try pick(for: today, in: context)
         if let existing, availableIDs.contains(existing.storyID) { return existing.storyID }
 
-        let previousID = try calendar.date(byAdding: .day, value: -1, to: date)
-            .flatMap { try pick(for: ReadingDay(at: $0, calendar: calendar), in: context)?.storyID }
+        let previousID = try previousStoryID(at: date, calendar: calendar, in: context)
         guard let selected = select(previousID), availableIDs.contains(selected) else { return nil }
         if let existing {
             existing.storyID = selected
             existing.isRevision = nil
+            existing.isLocked = nil
         } else {
             context.insert(DailyReadingPick(day: today, storyID: selected))
         }
         try save(context)
         return selected
+    }
+
+    static func lockDailyStory(_ storyID: String, at date: Date, calendar: Calendar, in context: ModelContext) throws {
+        guard let assignment = try pick(for: ReadingDay(at: date, calendar: calendar), in: context),
+              assignment.storyID == storyID, assignment.isLocked != true else { return }
+        assignment.isLocked = true
+        try save(context)
+    }
+
+    private static func previousStoryID(at date: Date, calendar: Calendar, in context: ModelContext) throws -> String? {
+        try calendar.date(byAdding: .day, value: -1, to: date)
+            .flatMap { try pick(for: ReadingDay(at: $0, calendar: calendar), in: context)?.storyID }
     }
 
     private static func pick(for day: ReadingDay, in context: ModelContext) throws -> DailyReadingPick? {

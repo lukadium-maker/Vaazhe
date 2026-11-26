@@ -157,9 +157,13 @@ struct Library: View {
         let canCelebrate = pendingGoalDay == day.key && planner.reachedGoalToday && selection == .today
             && scenePhase == .active && presentedStudyMode == nil && quiz == nil && reading == nil
 
+        let introducedToday = Set(planner.cardsIntroducedToday.map(\.id))
         tabs(at: now, index: index, planner: planner, day: day, dailyProgress: dailyProgress)
         .sheet(isPresented: $showsPlayground) { playground }
-        .sheet(item: $session, onDismiss: { presentedStudyMode = nil }) { StudyView(plan: $0) }
+        .sheet(item: $session, onDismiss: {
+            presentedStudyMode = nil
+            refreshDailyReading(at: clock.now, calendar: clock.calendar)
+        }) { StudyView(plan: $0) }
         .sheet(item: $quiz) { QuizView(quiz: $0.session) }
         .sheet(item: $reading, onDismiss: {
             refreshClock()
@@ -169,9 +173,10 @@ struct Library: View {
                 ReadingLibrary(stories: stories,
                                cards: Dictionary(uniqueKeysWithValues: (deck ?? []).map { ($0.id, $0) }),
                                statuses: planner.status, passageIndex: passageIndex,
-                               encountered: encounteredReadingIDs(at: now), dailyStoryID: dailyReading?.day == day ? dailyReading?.storyID : nil,
+                               encountered: encounteredReadingIDs(at: now), introducedToday: introducedToday,
+                               dailyStoryID: dailyReading?.day == day ? dailyReading?.storyID : nil,
                                isRevision: dailyReading?.isRevision == true, now: now,
-                               familiarity: dailyStoryFamiliarity(for: day), initialStoryID: presentation.storyID,
+                               familiarity: dailyStoryFamiliarity(for: day, introducedToday: introducedToday), initialStoryID: presentation.storyID,
                                positions: $readingPositions)
                     .modelContainer(readingContainer)
             }
@@ -203,6 +208,9 @@ struct Library: View {
         }
         .onChange(of: events.first?.attemptID) { _, _ in refreshClock() }
         .onChange(of: dailyProgress) { previous, current in
+            if session == nil, reading == nil, current.reachedGoal(since: previous) {
+                refreshDailyReading(at: clock.now, calendar: clock.calendar)
+            }
             guard presentedStudyMode == .scheduled, current.reachedGoal(since: previous),
                   lastCelebratedLearningDay != day.key else { return }
             lastCelebratedLearningDay = day.key
@@ -342,7 +350,7 @@ struct Library: View {
                     withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { welcomeVisible = true }
                 }
             dailyPlanPanel(planner, progress: dailyProgress)
-            readingPanel(for: day)
+            readingPanel(for: day, introducedToday: Set(planner.cardsIntroducedToday.map(\.id)))
             playgroundEntry(planner, afterDailyWork: planner.completedCoreToday || readingCompleted(on: day))
 
             if deck == nil {
@@ -392,17 +400,17 @@ struct Library: View {
         Set(states.filter { $0.introduced <= date }.map(\.cardID))
     }
 
-    private func dailyStoryFamiliarity(for day: ReadingDay) -> ReadingFamiliarity? {
+    private func dailyStoryFamiliarity(for day: ReadingDay, introducedToday: Set<String>) -> ReadingFamiliarity? {
         guard dailyReading?.day == day, let storyID = dailyReading?.storyID,
               let story = stories.first(where: { $0.id == storyID }) else { return nil }
-        return passageIndex.familiarity(for: story, encountered: encounteredReadingIDs(at: now))
+        return passageIndex.familiarity(for: story, encountered: encounteredReadingIDs(at: now), introducedToday: introducedToday)
     }
 
     @ViewBuilder
-    private func readingPanel(for day: ReadingDay) -> some View {
+    private func readingPanel(for day: ReadingDay, introducedToday: Set<String>) -> some View {
         if readingContainer != nil, let dailyReading, dailyReading.day == day,
            let story = stories.first(where: { $0.id == dailyReading.storyID }),
-           let familiarity = dailyStoryFamiliarity(for: day) {
+           let familiarity = dailyStoryFamiliarity(for: day, introducedToday: introducedToday) {
             ReadingRecommendationCard(story: story, familiarity: familiarity,
                                       record: readingRecords[story.id],
                                       hasReadingPosition: (readingPositions[story.id] ?? 0) > 0,

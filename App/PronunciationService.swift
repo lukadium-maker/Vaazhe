@@ -49,14 +49,18 @@ enum EnglishAccent: String, CaseIterable {
         }
     }
 
-    enum PlaybackState { case ready, playing, paused, finished }
+    enum PlaybackState { case ready, preparing, playing, paused, finished }
 
     private var playbackOwner: UUID?
     private var finishedOwner: UUID?
+    private var preparing = false
     private var paused = false
 
     func playbackState(for owner: UUID) -> PlaybackState {
-        if playbackOwner == owner { return paused ? .paused : .playing }
+        if playbackOwner == owner {
+            if preparing { return .preparing }
+            return paused ? .paused : .playing
+        }
         return finishedOwner == owner ? .finished : .ready
     }
 
@@ -90,13 +94,19 @@ enum EnglishAccent: String, CaseIterable {
         synthesizer.usesApplicationAudioSession = true
 
         let notifications = NotificationCenter.default
-        notifications.addObserver(self, selector: #selector(audioInterrupted(_:)),
-                                  name: AVAudioSession.interruptionNotification, object: audioSession)
+        if #available(iOS 27, *) {
+            notifications.addObserver(self, selector: #selector(audioBecameInactive(_:)),
+                                      name: AVAudioSession.didBecomeInactiveNotification, object: audioSession)
+        } else {
+            notifications.addObserver(self, selector: #selector(legacyAudioInterrupted(_:)),
+                                      name: AVAudioSession.interruptionNotification, object: audioSession)
+        }
         notifications.addObserver(self, selector: #selector(didEnterBackground(_:)),
                                   name: UIApplication.didEnterBackgroundNotification, object: nil)
     }
 
-    func speak(_ text: String, accent: EnglishAccent, slowly: Bool, owner: UUID? = nil) throws(PlaybackError) {
+    func speak(_ text: String, accent: EnglishAccent, slowly: Bool, owner: UUID? = nil,
+               onFailure: @escaping @MainActor (PlaybackError) -> Void) throws(PlaybackError) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
@@ -110,15 +120,7 @@ enum EnglishAccent: String, CaseIterable {
 
         TapSoundPlayer.shared.stop()
         cancelUtterance()
-        if !ownsActiveSession {
-            do {
-                try audioSession.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers])
-                try audioSession.setActive(true)
-                ownsActiveSession = true
-            } catch {
-                throw .audioUnavailable
-            }
-        }
+        releaseSession()
 
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = voice
@@ -128,7 +130,19 @@ enum EnglishAccent: String, CaseIterable {
         playbackOwner = owner
         finishedOwner = nil
         currentUtterance = utterance
-        synthesizer.speak(utterance)
+        ownsActiveSession = true
+        preparing = true
+        PlaybackAudioSession.activate(mode: .voicePrompt, options: .duckOthers) { [weak self] succeeded in
+            guard let self, currentUtterance === utterance else { return }
+            guard succeeded else {
+                cancelUtterance()
+                releaseSession()
+                onFailure(.audioUnavailable)
+                return
+            }
+            preparing = false
+            synthesizer.speak(utterance)
+        }
     }
 
     private func cancelUtterance() {
@@ -136,18 +150,31 @@ enum EnglishAccent: String, CaseIterable {
         currentUtterance = nil
         playbackOwner = nil
         paused = false
-        synthesizer.stopSpeaking(at: .immediate)
+        if !preparing { synthesizer.stopSpeaking(at: .immediate) }
+        preparing = false
     }
 
     private func releaseSession() {
         guard ownsActiveSession else { return }
         ownsActiveSession = false
-        try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        PlaybackAudioSession.deactivate()
     }
 
-    @objc nonisolated private func audioInterrupted(_ notification: Notification) {
+    @available(iOS 27, *)
+    @objc nonisolated private func audioBecameInactive(_ notification: Notification) {
+        guard let context = notification.userInfo?[AVAudioSession.deactivationContextKey]
+                  as? AVAudioSession.DeactivationContext, context.source == .system else { return }
+        handleSystemDeactivation()
+    }
+
+    @available(iOS, introduced: 18, deprecated: 27)
+    @objc nonisolated private func legacyAudioInterrupted(_ notification: Notification) {
         guard let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               type == AVAudioSession.InterruptionType.began.rawValue else { return }
+        handleSystemDeactivation()
+    }
+
+    private nonisolated func handleSystemDeactivation() {
         Task { @MainActor [weak self] in
             // iOS has already deactivated the session. A new tap can try to activate it again.
             self?.ownsActiveSession = false
