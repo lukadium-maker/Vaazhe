@@ -5,6 +5,7 @@ import SwiftUI
 struct DeveloperMenu: View {
     let deck: [Card]
     let stories: [ReadingStory]
+    let passageIndex: ReadingPassageIndex
     let readingContainer: ModelContainer?
     let startSimulation: (Bool) throws -> Void
     let onReadingChange: () -> Void
@@ -225,6 +226,16 @@ struct DeveloperMenu: View {
             LabeledContent("Current streak", value: String(diagnostics.streak.current))
             LabeledContent("Longest streak", value: String(diagnostics.streak.longest))
             LabeledContent("Today’s story", value: assignmentDay == simulation.day ? selectedStory?.titleEn ?? "None" : "Loading…")
+            if assignmentDay == simulation.day, let selectedStory {
+                let encountered = Set(states.filter { $0.introduced <= simulation.date }.map(\.cardID))
+                let familiarity = passageIndex.familiarity(for: selectedStory, encountered: encountered)
+                LabeledContent("Familiar passage words", value: "\(familiarity.familiarPassageIDs.count) / \(familiarity.passageIDs.count)")
+                LabeledContent("Familiar targets", value: "\(familiarity.familiarTargetIDs.count) / \(selectedStory.targetWordIds.count)")
+                let words = deck.filter { familiarity.familiarPassageIDs.contains($0.id) }.map(\.word).sorted()
+                if !words.isEmpty { Text(words.joined(separator: ", ")).font(.footnote) }
+                Text("The saved story stays in place today. New picks weigh passage familiarity, reading level and target reinforcement.")
+                    .font(.footnote)
+            }
             LabeledContent("Vocabulary complete", value: diagnostics.vocabularyComplete ? "Yes" : "No")
             LabeledContent("Reading complete", value: diagnostics.readingComplete ? "Yes" : "No")
             ForEach(upcoming.prefix(5)) { entry in
@@ -343,7 +354,8 @@ struct DeveloperMenu: View {
             let planner = StudyPlanner(cards: deck + personal.map(\.card), progress: progress, goal: DailyGoal.preferred(goal),
                                        at: date, calendar: calendar, recalls: recalls)
             let id = try ReadingStore.dailyStoryID(stories: stories, planner: planner, progress: progress, recalls: recalls,
-                                                   records: records, at: date, calendar: calendar, in: readingContext)
+                                                   records: records, at: date, calendar: calendar, in: readingContext,
+                                                   passageIndex: passageIndex)
             selectedStory = stories.first { $0.id == id }
             completedReadingDates = try simulation.readingCompletions().filter { $0.storyID == id }.map(\.date)
             assignmentDay = simulation.day

@@ -97,6 +97,7 @@ final class LongTermLearningTests: XCTestCase {
         var progress: [String: StudyPlanner.Progress] = [:]
         var recalls: [Recall] = []
         var output: [Day] = []
+        let passageIndex = ReadingPassageIndex(stories: stories, cards: cards)
 
         for day in 1...90 {
             let date = try XCTUnwrap(calendar.date(byAdding: .day, value: day - 1, to: clock.now))
@@ -122,7 +123,7 @@ final class LongTermLearningTests: XCTestCase {
             if adaptive && studies {
                 let records = try ReadingStore.records(in: context)
                 let pick = try XCTUnwrap(ReadingStore.dailyAssignment(stories: stories, planner: planner,
-                    progress: progress, recalls: recalls, records: records, at: date, calendar: calendar, in: context))
+                    progress: progress, recalls: recalls, records: records, at: date, calendar: calendar, in: context, passageIndex: passageIndex))
                 let story = try XCTUnwrap(stories.first { $0.id == pick.storyID })
                 let allCompleted = stories.allSatisfy { records[$0.id]?.completed == true }
                 XCTAssertEqual(pick.isRevision, allCompleted)
@@ -130,7 +131,7 @@ final class LongTermLearningTests: XCTestCase {
                 try ReadingStore.complete(story, score: story.questions.count, at: date, in: context)
                 let refreshed = try ReadingStore.dailyAssignment(stories: stories, planner: planner,
                     progress: progress, recalls: recalls, records: ReadingStore.records(in: context),
-                    at: date, calendar: calendar, in: context)
+                    at: date, calendar: calendar, in: context, passageIndex: passageIndex)
                 XCTAssertEqual(refreshed?.storyID, pick.storyID)
                 XCTAssertEqual(refreshed?.isRevision, pick.isRevision)
                 storyID = story.id

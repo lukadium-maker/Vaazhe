@@ -253,6 +253,92 @@ final class ReadingTests: XCTestCase {
         }
     }
 
+    func testFamiliarHighlightsShareTheCountAndResolveInflectionsToBaseEntries() throws {
+        let (stories, cards) = try load()
+        let train = try XCTUnwrap(stories.first)
+        let trainIndex = ReadingPassageIndex(stories: stories, cards: cards)
+        let originalSeven = Set(train.targetWordIds)
+        let additionalWords = Set(cards.filter { ["morning", "late", "friend"].contains($0.word) }.map(\.id))
+        let originalTen = originalSeven.union(additionalWords)
+        XCTAssertEqual(trainIndex.familiarity(for: train, encountered: originalSeven).familiarPassageIDs, originalSeven)
+        XCTAssertEqual(trainIndex.familiarity(for: train, encountered: originalTen).familiarPassageIDs.count, 10)
+        XCTAssertEqual(Set(trainIndex.matches(for: train).map(\.id)).intersection(originalTen), originalTen)
+
+        let words = ["ticket", "leave", "early", "station", "wait", "arrive", "meet", "morning", "late", "stop"]
+        let vocabulary = cards.filter { words.contains($0.word) }
+        let story = ReadingStory(
+            id: train.id, titleEn: train.titleEn, titleFa: train.titleFa, level: train.level,
+            targetWords: train.targetWords, targetWordIds: train.targetWordIds,
+            textEn: "Morning, tickets! Leaves, left, leaving. Early at the station. Waits, waited, waiting. "
+                + "Arrives, arrived, arriving. Meets, met, meeting. Late; stopped. Ticketing and lately.",
+            textFa: train.textFa, questions: train.questions
+        )
+        let index = ReadingPassageIndex(stories: [story], cards: vocabulary)
+        let matches = index.matches(for: story)
+        let familiarSeven = Set(vocabulary.filter { words.prefix(7).contains($0.word) }.map(\.id))
+        let familiarTen = Set(vocabulary.map(\.id))
+        for (encountered, count) in [(familiarSeven, 7), (familiarTen, 10)] {
+            let familiar = index.familiarity(for: story, encountered: encountered).familiarPassageIDs
+            XCTAssertEqual(familiar.count, count)
+            XCTAssertEqual(Set(matches.filter { encountered.contains($0.id) }.map(\.id)), familiar)
+        }
+        let surfaceForms = Dictionary(grouping: matches, by: \.id)
+            .mapValues { $0.map { String(story.textEn[$0.range]) } }
+        XCTAssertEqual(surfaceForms["en-leave-verb"], ["Leaves", "left", "leaving"])
+        XCTAssertEqual(surfaceForms["en-arrive-verb"], ["Arrives", "arrived", "arriving"])
+        XCTAssertEqual(surfaceForms["en-meet-verb"], ["Meets", "met", "meeting"])
+        XCTAssertEqual(surfaceForms["en-wait-verb"], ["Waits", "waited", "waiting"])
+        XCTAssertEqual(surfaceForms["en-ticket-noun"], ["tickets"])
+        XCTAssertFalse(matches.contains { ["Ticketing", "lately"].contains(String(story.textEn[$0.range])) })
+    }
+
+    func testPassageFamiliarityCountsDistinctFormsAndSeparateTargets() throws {
+        let (stories, cards) = try load()
+        let story = try XCTUnwrap(stories.first { $0.titleEn == "A Healthier Habit" })
+        let index = ReadingPassageIndex(stories: stories, cards: cards)
+        let known = Set(cards.filter { ["phone", "bed", "doctor", "morning", "week"].contains($0.word) }.map(\.id))
+        let result = index.familiarity(for: story, encountered: known)
+        XCTAssertEqual(result.familiarPassageIDs, known)
+        XCTAssertTrue(result.familiarTargetIDs.isEmpty)
+        XCTAssertGreaterThan(result.rankingBonus, 0)
+        XCTAssertEqual(index.familiarity(for: story, encountered: []).rankingBonus, 0)
+
+        var duplicate = try XCTUnwrap(cards.first { $0.word == "phone" })
+        duplicate.id = "personal-another-phone"
+        let ambiguous = ReadingPassageIndex(stories: stories, cards: cards + [duplicate])
+        let phoneID = try XCTUnwrap(cards.first { $0.word == "phone" }?.id)
+        XCTAssertFalse(ambiguous.familiarity(for: story, encountered: known).passageIDs.contains(phoneID))
+    }
+
+    @MainActor func testPassageFamiliarityImprovesNextPickWhilePreservingSavedAssignment() throws {
+        let (stories, cards) = try load()
+        let candidates = Array(stories.prefix(2))
+        let train = candidates[0]
+        let breakfast = candidates[1]
+        let index = ReadingPassageIndex(stories: candidates, cards: cards)
+        let container = try ModelContainer(for: ReadingProgress.self, DailyReadingPick.self,
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = container.mainContext
+        func assign(_ progress: [String: StudyPlanner.Progress], date: Date) throws -> String? {
+            let planner = StudyPlanner(cards: cards, progress: progress, goal: 10, at: date, calendar: calendar)
+            return try ReadingStore.dailyAssignment(stories: candidates, planner: planner, progress: progress,
+                recalls: [], records: [:], at: date, calendar: calendar, in: context, passageIndex: index)?.storyID
+        }
+        XCTAssertEqual(try assign([:], date: now), train.id)
+        let nextDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: now))
+        let known = Dictionary(uniqueKeysWithValues: cards.filter {
+            ["father", "table", "laugh"].contains($0.word)
+        }.map { ($0.id, StudyPlanner.Progress(introduced: now, due: nextDay)) })
+        func recommend(_ progress: [String: StudyPlanner.Progress], at date: Date) -> String? {
+            ReadingRecommendationEngine.recommend(stories: candidates, statuses: [:], progress: progress,
+                recalls: [], records: [:], at: date, calendar: calendar, passageIndex: index)?.storyID
+        }
+        XCTAssertEqual(recommend(known, at: now.addingTimeInterval(-1)), train.id)
+        XCTAssertEqual(recommend(known, at: now), breakfast.id)
+        XCTAssertEqual(try assign(known, date: now), train.id)
+        XCTAssertEqual(try assign(known, date: nextDay), breakfast.id)
+    }
+
     func testRecommendationsRespondToDifferentLearnersAndDifficultWords() throws {
         let (stories, cards) = try load()
         let travel = ["en-airport-noun", "en-airline-noun"]

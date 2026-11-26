@@ -9,7 +9,10 @@ struct ReadingLibrary: View {
     let stories: [ReadingStory]
     let cards: [String: Card]
     let statuses: [String: VocabularyStatus]
+    let passageIndex: ReadingPassageIndex
+    let encountered: Set<String>
     let dailyStoryID: String?
+    let familiarity: ReadingFamiliarity?
     let isRevision: Bool
     let now: Date
     @Binding private var positions: [String: Double]
@@ -22,12 +25,15 @@ struct ReadingLibrary: View {
     @Environment(AppClock.self) private var clock
 
     init(stories: [ReadingStory], cards: [String: Card], statuses: [String: VocabularyStatus],
-         dailyStoryID: String?, isRevision: Bool, now: Date,
-         initialStoryID: String?, positions: Binding<[String: Double]>) {
+         passageIndex: ReadingPassageIndex, encountered: Set<String>, dailyStoryID: String?, isRevision: Bool, now: Date,
+         familiarity: ReadingFamiliarity?, initialStoryID: String?, positions: Binding<[String: Double]>) {
         self.stories = stories
         self.cards = cards
         self.statuses = statuses
+        self.passageIndex = passageIndex
+        self.encountered = encountered
         self.dailyStoryID = dailyStoryID
+        self.familiarity = familiarity
         self.isRevision = isRevision
         self.now = now
         _positions = positions
@@ -42,12 +48,10 @@ struct ReadingLibrary: View {
         let records = records
         NavigationStack(path: $path) {
             Page {
-                if let featured = stories.first(where: { $0.id == dailyStoryID }) {
+                if let featured = stories.first(where: { $0.id == dailyStoryID }), let familiarity {
                     let completion = records[featured.id]?.lastCompletion
                     ReadingRecommendationCard(story: featured,
-                                              matchingVocabularyCount: featured.targetWordIds.filter {
-                                                  statuses[$0].map { $0.stage != .new } == true
-                                              }.count,
+                                              familiarity: familiarity,
                                               record: records[featured.id],
                                               hasReadingPosition: (positions[featured.id] ?? 0) > 0,
                                               isRevision: isRevision,
@@ -83,6 +87,8 @@ struct ReadingLibrary: View {
                 case .passage(let id):
                     if let story = stories.first(where: { $0.id == id }) {
                         ReadingPassageView(story: story, cards: cards, statuses: statuses,
+                                           matches: passageIndex.matches(for: story),
+                                           familiarIDs: passageIndex.familiarity(for: story, encountered: encountered).familiarPassageIDs,
                                            hasRead: records[id]?.read == true,
                                            position: Binding(get: { positions[id, default: 0] },
                                                              set: { positions[id] = $0 })) {
@@ -91,7 +97,10 @@ struct ReadingLibrary: View {
                     }
                 case .quiz(let id):
                     if let story = stories.first(where: { $0.id == id }) {
-                        ReadingQuizView(story: story, cards: cards, reread: { _ = path.popLast() },
+                        let passageIDs = Set(passageIndex.matches(for: story).map(\.id))
+                        let vocabulary = story.targetWordIds.filter { passageIDs.contains($0) }.compactMap { cards[$0] }
+                        ReadingQuizView(story: story, vocabulary: vocabulary,
+                                        reread: { _ = path.popLast() },
                                         returnToLibrary: { path.removeAll() })
                     }
                 }
@@ -137,7 +146,7 @@ struct ReadingLibrary: View {
 
 struct ReadingRecommendationCard: View {
     let story: ReadingStory
-    let matchingVocabularyCount: Int
+    let familiarity: ReadingFamiliarity
     let record: ReadingRecord?
     var hasReadingPosition = false
     var isRevision = false
@@ -228,11 +237,7 @@ struct ReadingRecommendationCard: View {
                     .fixedSize(horizontal: true, vertical: false)
                 VStack(alignment: .leading, spacing: DashboardMetrics.micro) { todayStoryMetadata }
             }
-            if matchingVocabularyCount > 0 {
-                Text("\(fa(matchingVocabularyCount)) واژهٔ آشنا")
-                    .font(DashboardFont.metadata)
-                    .foregroundStyle(Palette.muted)
-            }
+            passageFamiliarityLabel.font(DashboardFont.metadata)
         }
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -295,6 +300,11 @@ struct ReadingRecommendationCard: View {
         .modifier(Panel(padding: 16))
     }
 
+    private var passageFamiliarityLabel: some View {
+        Text("\(fa(familiarity.familiarPassageIDs.count)) واژهٔ آشنا در متن")
+            .foregroundStyle(Palette.muted)
+    }
+
     private var heading: some View {
         HStack(spacing: 6) {
             Text(isRevision ? "مرور داستان" : "داستان پیشنهادی امروز")
@@ -339,8 +349,8 @@ struct ReadingRecommendationCard: View {
         Text(inLibrary ? "\(fa(story.questions.count)) پرسش • حدود \(fa(story.readingMinutes)) دقیقه"
              : "حدود \(fa(story.readingMinutes)) دقیقه")
             .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-        if matchingVocabularyCount > 0 {
-            Text("\(fa(matchingVocabularyCount)) واژهٔ آشنا")
+        if !familiarity.passageIDs.isEmpty {
+            passageFamiliarityLabel
                 .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
         }
     }
@@ -403,6 +413,8 @@ private struct ReadingPassageView: View {
     let story: ReadingStory
     let cards: [String: Card]
     let statuses: [String: VocabularyStatus]
+    let matches: [ReadingVocabulary.Match]
+    let familiarIDs: Set<String>
     let hasRead: Bool
     @Binding var position: Double
     let startQuiz: () -> Void
@@ -414,6 +426,9 @@ private struct ReadingPassageView: View {
     @State private var definition: Card?
     @State private var errorMessage: String?
     @State private var savedRead = false
+    @ScaledMetric(relativeTo: .title3) private var passageLineSpacing = 7.0
+    @State private var audioOwner = UUID()
+    private var audio: PronunciationService { .shared }
     @State private var showsTranslation = false
 
     var body: some View {
@@ -430,35 +445,16 @@ private struct ReadingPassageView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .allowsHitTesting(false)
             }
-            HStack(spacing: 12) {
-                Button {
-                    do throws(PronunciationService.PlaybackError) {
-                        try PronunciationService.shared.speak(story.textEn, accent: .preferred(voice),
-                                                              slowly: slowPronunciation)
-                    } catch {
-                        errorMessage = error.message
-                    }
-                } label: {
-                    Label("پخش داستان", systemImage: "speaker.wave.2")
-                        .frame(minHeight: 44)
-                }
-                Button {
-                    PronunciationService.shared.stop(ifSpeaking: story.textEn)
-                } label: {
-                    Image(systemName: "stop.circle").frame(minWidth: 44, minHeight: 44)
-                }
-                .accessibilityLabel("توقف پخش داستان")
-            }
-            .buttonStyle(.plain).foregroundStyle(Palette.sage)
+            audioControl
 
             Text(linkedPassage)
                 .font(.system(.title3, design: .serif))
-                .lineSpacing(7)
+                .lineSpacing(passageLineSpacing)
                 .textSelection(.enabled)
                 .readingEnglish()
                 .environment(\.openURL, OpenURLAction { url in
                     guard url.scheme == "elphy-word", let id = url.host, let card = cards[id] else { return .discarded }
-                    PronunciationService.shared.stop(ifSpeaking: story.textEn)
+                    audio.stop(for: audioOwner)
                     definition = card
                     return .handled
                 })
@@ -468,24 +464,8 @@ private struct ReadingPassageView: View {
                 translationPanel(translation)
             }
 
-            let vocabulary = encounteredCards(in: story, cards: cards)
-            if !vocabulary.isEmpty {
-                DisclosureGroup("واژه‌های داستان") {
-                    ForEach(vocabulary) { card in
-                        Button {
-                            PronunciationService.shared.stop(ifSpeaking: story.textEn)
-                            definition = card
-                        } label: {
-                            Text(card.word).font(.system(.body, design: .serif))
-                                .frame(minHeight: 44)
-                                .readingEnglish()
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .font(PersianFont.emphasis).foregroundStyle(Palette.sage)
-            }
+            vocabularyGroup("واژه‌های آشنا در متن", ids: matches.map(\.id).filter { familiarIDs.contains($0) })
+            vocabularyGroup("واژه‌های هدف داستان", ids: story.targetWordIds.filter { !familiarIDs.contains($0) })
 
             Button("شروع آزمون درک مطلب") {
                 if recordRead() { startQuiz() }
@@ -497,11 +477,65 @@ private struct ReadingPassageView: View {
             }
         }
         .persianNavigationTitle("داستان")
-        .onDisappear { PronunciationService.shared.stop(ifSpeaking: story.textEn) }
+        .onDisappear { audio.stop(for: audioOwner) }
         .sheet(item: $definition) { card in
             ReadingDefinition(card: card, status: statuses[card.id])
         }
         .readingError($errorMessage)
+    }
+
+    private var audioControl: some View {
+        let state = audio.playbackState(for: audioOwner)
+        let label: (String, String) = switch state {
+        case .ready: ("پخش داستان", "play.fill")
+        case .playing: ("توقف موقت", "pause.fill")
+        case .paused: ("ادامهٔ پخش", "play.fill")
+        case .finished: ("پخش دوباره", "arrow.counterclockwise")
+        }
+        return Button {
+            switch state {
+            case .playing: audio.pause(for: audioOwner)
+            case .paused: audio.resume(for: audioOwner)
+            case .ready, .finished:
+                do throws(PronunciationService.PlaybackError) {
+                    try audio.speak(story.textEn, accent: .preferred(voice), slowly: slowPronunciation, owner: audioOwner)
+                } catch {
+                    errorMessage = error.message
+                }
+            }
+        } label: {
+            Label(label.0, systemImage: label.1)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .font(PersianFont.emphasis)
+        .foregroundStyle(Palette.sage)
+        .modifier(Panel(fill: state == .playing ? Palette.tint : Palette.card, padding: 4))
+        .accessibilityValue(state == .playing ? "در حال پخش" : "")
+    }
+
+    @ViewBuilder
+    private func vocabularyGroup(_ title: String, ids: [String]) -> some View {
+        var seen = Set<String>()
+        let vocabulary = ids.filter { seen.insert($0).inserted }.compactMap { cards[$0] }
+        if !vocabulary.isEmpty {
+            DisclosureGroup(title) {
+                ForEach(vocabulary) { card in
+                    Button {
+                        audio.stop(for: audioOwner)
+                        definition = card
+                    } label: {
+                        Text(card.word).font(.system(.body, design: .serif))
+                            .frame(minHeight: 44)
+                            .readingEnglish()
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .font(PersianFont.emphasis).foregroundStyle(Palette.sage)
+        }
     }
 
     private func translationPanel(_ translation: String) -> some View {
@@ -540,7 +574,8 @@ private struct ReadingPassageView: View {
     private var linkedPassage: AttributedString {
         var text = AttributedString()
         var start = story.textEn.startIndex
-        for (range, id) in ReadingVocabulary.matches(in: story) where cards[id] != nil {
+        for match in matches where familiarIDs.contains(match.id) {
+            let (range, id) = (match.range, match.id)
             text += AttributedString(String(story.textEn[start..<range.lowerBound]))
             var word = AttributedString(String(story.textEn[range]))
             word.link = URL(string: "elphy-word://\(id)")
@@ -597,7 +632,7 @@ private struct ReadingDefinition: View {
 
 private struct ReadingQuizView: View {
     let story: ReadingStory
-    let cards: [String: Card]
+    let vocabulary: [Card]
     let reread: () -> Void
     let returnToLibrary: () -> Void
 
@@ -606,10 +641,10 @@ private struct ReadingQuizView: View {
     @State private var quiz: ReadingQuiz
     @State private var errorMessage: String?
 
-    init(story: ReadingStory, cards: [String: Card], reread: @escaping () -> Void,
+    init(story: ReadingStory, vocabulary: [Card], reread: @escaping () -> Void,
          returnToLibrary: @escaping () -> Void) {
         self.story = story
-        self.cards = cards
+        self.vocabulary = vocabulary
         self.reread = reread
         self.returnToLibrary = returnToLibrary
         _quiz = State(initialValue: ReadingQuiz(questions: story.questions))
@@ -681,7 +716,6 @@ private struct ReadingQuizView: View {
             Heading(title: "آفرین! داستان رو تموم کردی.", subtitle: "داستان خوانده شد و آزمون کامل شد.")
             Text("\(fa(quiz.score)) از \(fa(total)) پاسخ درست • \(fa(percentage))٪")
                 .font(PersianFont.emphasis)
-            let vocabulary = encounteredCards(in: story, cards: cards)
             if !vocabulary.isEmpty {
                 Text("واژه‌های داستان").font(HeadingFont.section)
                 Text(vocabulary.map(\.word).joined(separator: ", "))
@@ -708,11 +742,6 @@ private struct ReadingQuizView: View {
         }
         quiz.advance()
     }
-}
-
-private func encounteredCards(in story: ReadingStory, cards: [String: Card]) -> [Card] {
-    let encountered = Set(ReadingVocabulary.matches(in: story).map(\.id))
-    return story.targetWordIds.filter { encountered.contains($0) }.compactMap { cards[$0] }
 }
 
 private extension View {
