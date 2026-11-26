@@ -3,7 +3,7 @@ import SwiftUI
 struct TodayHeader: View {
     let date: Date
     let timeZone: TimeZone
-    @ScaledMetric(relativeTo: .largeTitle) private var wordmarkSize = 31.0
+    @ScaledMetric(relativeTo: .largeTitle) private var wordmarkWidth = 106.0
 
     var body: some View {
         let persianDate = Date.FormatStyle(locale: Locale(identifier: "fa_IR"),
@@ -17,10 +17,11 @@ struct TodayHeader: View {
         }
         .accessibilityElement(children: .combine)
 
-        let wordmark = Text("Elphy")
-            .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
-            .foregroundStyle(Palette.sage)
-            .environment(\.layoutDirection, .leftToRight)
+        let wordmark = Image("elphy_wordmark")
+            .resizable()
+            .scaledToFit()
+            .frame(width: wordmarkWidth)
+            .accessibilityLabel("Elphy")
 
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .center, spacing: DashboardMetrics.padding) {
