@@ -59,6 +59,11 @@ struct StudyView: View {
                         let currentAttempt = session.attemptID
                         Text("چقدر خوب به یاد آوردی؟").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
                         ratingButtons(attemptID: currentAttempt)
+                        if session.plan.mode != .scheduled {
+                            Text("پاسخ‌ها فقط برای همین تمرین‌اند. زمان مرور بعدی ثابت می‌ماند.")
+                                .font(PersianFont.subheadline)
+                                .foregroundStyle(Palette.muted)
+                        }
                     } else {
                         Button("نمایش معنی") {
                             guard session.attemptID == attempt, !session.isRevealed else { return }
