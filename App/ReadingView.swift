@@ -431,6 +431,7 @@ private struct ReadingPassageView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(AppClock.self) private var clock
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("voice", store: .standard) private var voice = EnglishAccent.american.rawValue
     @AppStorage("slowPronunciation", store: .standard) private var slowPronunciation = false
     @State private var definition: Card?
@@ -525,9 +526,18 @@ private struct ReadingPassageView: View {
                 }
             }
         } label: {
-            Label(label.0, systemImage: label.1)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
+            Label {
+                Text(label.0)
+            } icon: {
+                if state == .playing && !reduceMotion {
+                    Image(systemName: "waveform")
+                        .symbolEffect(.pulse, options: .repeating)
+                } else {
+                    Image(systemName: label.1)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .font(PersianFont.emphasis)
@@ -566,7 +576,9 @@ private struct ReadingPassageView: View {
     private func translationPanel(_ translation: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
-                showsTranslation.toggle()
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.34)) {
+                    showsTranslation.toggle()
+                }
             } label: {
                 HStack(spacing: 10) {
                     Label(showsTranslation ? "پنهان کردن ترجمهٔ فارسی" : "نمایش ترجمهٔ فارسی",
@@ -590,6 +602,7 @@ private struct ReadingPassageView: View {
                     .lineSpacing(6)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 8)))
             }
         }
         .modifier(Panel(fill: Palette.tint, padding: 12))

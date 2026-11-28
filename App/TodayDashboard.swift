@@ -42,8 +42,17 @@ struct TodayWelcomeCard: View {
     let detail: String
     let button: String?
     let completed: Bool
+    let day: ReadingDay
+    let isVisible: Bool
+    let celebration: UUID?
     let start: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("lastMascotGreetingDay") private var lastGreetingDay = ""
+    @State private var greeting = false
+    @State private var lifted = false
+    @State private var burstExpanded = false
+    @State private var burstVisible = false
 
     private var message: some View {
         VStack(alignment: .leading, spacing: DashboardMetrics.micro) {
@@ -61,13 +70,13 @@ struct TodayWelcomeCard: View {
         VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: DashboardMetrics.inline) {
-                    ElphyMascotView(mood: mascotMood, size: 108)
+                    mascot(size: 108)
                     message
                 }
             } else {
                 WelcomeCardRow {
                     message.fixedSize(horizontal: false, vertical: true)
-                    ElphyMascotView(mood: mascotMood, size: nil)
+                    mascot(size: nil)
                 }
             }
             if let button {
@@ -76,9 +85,77 @@ struct TodayWelcomeCard: View {
             }
         }
         .modifier(Panel(fill: Palette.tint, padding: DashboardMetrics.group, radius: DashboardMetrics.cardRadius))
+        .task(id: isVisible && celebration == nil && !reduceMotion ? day : nil) { await greet() }
+        .task(id: celebration) { await celebrate() }
+        .onChange(of: reduceMotion) { _, reduced in
+            if reduced {
+                greeting = false
+                lifted = false
+                burstVisible = false
+            }
+        }
     }
-    private var mascotMood: ElphyMascotView.Mood {
-        completed ? .celebrating : .welcome
+
+    private func mascot(size: CGFloat?) -> some View {
+        ElphyMascotView(mood: completed || celebration != nil ? .proud : .welcome, size: size)
+            .rotationEffect(.degrees(reduceMotion ? 0 : lifted ? -11 : greeting ? -8 : 0), anchor: .bottom)
+            .offset(y: reduceMotion ? 0 : lifted ? -12 : greeting ? -8 : 0)
+            .overlay {
+                if celebration != nil && !reduceMotion {
+                    GeometryReader { geometry in
+                        let radius = min(geometry.size.width, geometry.size.height) * 0.48
+                        ZStack {
+                            Circle()
+                                .strokeBorder(Palette.celebrationGold.opacity(0.55), lineWidth: 1.5)
+                                .frame(width: radius * 1.7, height: radius * 1.7)
+                                .scaleEffect(burstExpanded ? 1 : 0.55)
+                            ForEach(0..<6) { index in
+                                let angle = Double(index) * .pi / 3 - .pi / 6
+                                let distance = radius * (burstExpanded ? 1 : 0.45)
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: index.isMultiple(of: 2) ? 10 : 7))
+                                    .foregroundStyle(Palette.celebrationGold)
+                                    .scaleEffect(burstExpanded ? 1 : 0.4)
+                                    .offset(x: cos(angle) * distance, y: sin(angle) * distance)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(burstVisible ? 1 : 0)
+                    }
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private func greet() async {
+        greeting = false
+        guard isVisible, !reduceMotion, celebration == nil, lastGreetingDay != day.key else { return }
+        guard (try? await Task.sleep(for: .milliseconds(380))) != nil, !Task.isCancelled else { return }
+        lastGreetingDay = day.key
+        withAnimation(.easeOut(duration: 0.32)) { greeting = true }
+        if (try? await Task.sleep(for: .milliseconds(460))) != nil {
+            withAnimation(.easeInOut(duration: 0.36)) { greeting = false }
+        }
+    }
+
+    private func celebrate() async {
+        lifted = false
+        burstExpanded = false
+        burstVisible = false
+        guard celebration != nil, !reduceMotion else { return }
+        guard (try? await Task.sleep(for: .milliseconds(70))) != nil else { return }
+        withAnimation(.easeOut(duration: 0.32)) {
+            lifted = true
+            burstExpanded = true
+            burstVisible = true
+        }
+        if (try? await Task.sleep(for: .milliseconds(740))) != nil {
+            withAnimation(.easeInOut(duration: 0.36)) {
+                lifted = false
+                burstVisible = false
+            }
+        }
     }
 }
 
