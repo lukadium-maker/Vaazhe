@@ -171,14 +171,14 @@ private struct StudyMascotProgress: View {
                 .accessibilityHidden(queue.cards.isEmpty)
             GeometryReader { geometry in
                 let trackWidth = max(0, geometry.size.width - markerSize)
-                ZStack(alignment: .topLeading) {
+                ZStack {
                     ZStack(alignment: .trailing) {
                         Capsule().fill(Palette.border)
                         Capsule().fill(Palette.sage)
                             .frame(width: trackWidth * fraction)
                     }
                     .frame(width: trackWidth, height: 6)
-                    .offset(x: markerSize / 2, y: markerSize + 1)
+                    .position(x: geometry.size.width / 2, y: markerSize + 4)
 
                     ElphyMascotView(mood: queue.cards.isEmpty ? .proud : .studying, size: markerSize)
                         .scaleEffect(x: -1, y: 1)
@@ -188,7 +188,8 @@ private struct StudyMascotProgress: View {
                             CubicKeyframe(-7, duration: 0.16)
                             CubicKeyframe(0, duration: 0.19)
                         }
-                        .offset(x: trackWidth * (1 - fraction))
+                        .position(x: (geometry.size.width - trackWidth) / 2 + trackWidth * (1 - fraction),
+                                  y: markerSize / 2)
                 }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: fraction)
                 .environment(\.layoutDirection, .leftToRight)
