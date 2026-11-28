@@ -335,6 +335,7 @@ struct Heading: View {
 struct CardContent: View {
     let card: Card
     let revealed: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("voice", store: .standard) private var voice = EnglishAccent.american.rawValue
     @AppStorage("slowPronunciation", store: .standard) private var slowPronunciation = false
     @State private var playbackError: PronunciationService.PlaybackError?
@@ -360,7 +361,7 @@ struct CardContent: View {
             if revealed {
                 Divider()
                 Text(card.meaningFa).font(PersianFont.meaning)
-                    .transition(.opacity)
+                    .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 12)))
                 ForEach(card.alternativeMeaningsFa, id: \.self) { Text($0) }
                 if !card.exampleEn.isEmpty || !card.exampleFa.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {

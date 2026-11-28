@@ -105,6 +105,7 @@ struct Library: View {
     #if DEBUG
     let startSimulation: (Bool) throws -> Void
     @State private var showsDeveloperMenu = false
+    @State private var developerMenuIsOnScreen = false
     @State private var readingRevision = 0
     #endif
     @Query private var personal: [PersonalCard]
@@ -136,6 +137,14 @@ struct Library: View {
     private var cards: [Card] { (deck ?? []) + personal.map(\.card) }
     private var stateByID: [String: ReviewState] { Dictionary(uniqueKeysWithValues: states.map { ($0.cardID, $0) }) }
 
+    private var todayIsVisible: Bool {
+        #if DEBUG
+        if showsDeveloperMenu || developerMenuIsOnScreen { return false }
+        #endif
+        return selection == .today && scenePhase == .active && session == nil
+            && presentedStudyMode == nil && quiz == nil && reading == nil && !showsPlayground
+    }
+
     var body: some View {
         let index = stateByID
         let calendar = clock.calendar
@@ -154,8 +163,7 @@ struct Library: View {
         let dailyProgress = DailyLearningProgress(day: calendar.startOfDay(for: now),
                                                   count: planner.introducedToday, target: planner.effectiveGoal,
                                                   configuredGoal: DailyGoal.preferred(goal))
-        let canCelebrate = pendingGoalDay == day.key && planner.reachedGoalToday && selection == .today
-            && scenePhase == .active && presentedStudyMode == nil && quiz == nil && reading == nil
+        let canCelebrate = pendingGoalDay == day.key && planner.reachedGoalToday && todayIsVisible
 
         let introducedToday = Set(planner.cardsIntroducedToday.map(\.id))
         tabs(at: now, index: index, planner: planner, day: day, dailyProgress: dailyProgress)
@@ -182,7 +190,9 @@ struct Library: View {
             }
         }
         #if DEBUG
-        .sheet(isPresented: $showsDeveloperMenu) {
+        .sheet(isPresented: $showsDeveloperMenu, onDismiss: {
+            developerMenuIsOnScreen = false
+        }) {
             DeveloperMenu(deck: deck ?? [], stories: stories, passageIndex: passageIndex, readingContainer: readingContainer,
                           startSimulation: startSimulation, onReadingChange: {
                 readingRevision += 1
@@ -193,6 +203,7 @@ struct Library: View {
                 clearReading()
                 readingRevision += 1
             })
+            .onAppear { developerMenuIsOnScreen = true }
         }
         #endif
         .task(id: readingRefreshDay) {
@@ -211,7 +222,8 @@ struct Library: View {
             if session == nil, reading == nil, current.reachedGoal(since: previous) {
                 refreshDailyReading(at: clock.now, calendar: clock.calendar)
             }
-            guard presentedStudyMode == .scheduled, current.reachedGoal(since: previous),
+            guard presentedStudyMode == .scheduled || clock.isSimulating,
+                  current.reachedGoal(since: previous),
                   lastCelebratedLearningDay != day.key else { return }
             lastCelebratedLearningDay = day.key
             pendingGoalDay = day.key
@@ -225,7 +237,7 @@ struct Library: View {
         .task(id: goalCelebration) {
             guard goalCelebration != nil else { return }
             do {
-                try await Task.sleep(for: .seconds(1))
+                try await Task.sleep(for: .milliseconds(1350))
                 goalCelebration = nil
             } catch {
                 // A newer presentation replaced this celebration.
@@ -342,7 +354,8 @@ struct Library: View {
             #endif
 
             TodayWelcomeCard(title: next.title, detail: next.detail, button: next.button,
-                             completed: planner.completedCoreToday, start: startNextAction)
+                             completed: planner.completedCoreToday, day: day, isVisible: todayIsVisible,
+                             celebration: todayIsVisible ? goalCelebration : nil, start: startNextAction)
                 .opacity(welcomeVisible || reduceMotion ? 1 : 0)
                 .offset(y: welcomeVisible || reduceMotion ? 0 : 8)
                 .onAppear {

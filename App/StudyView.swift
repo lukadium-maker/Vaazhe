@@ -24,84 +24,87 @@ struct StudyView: View {
 
     var body: some View {
         NavigationStack {
-            Page {
-                if let card = session.currentCard {
-                    let attempt = session.attemptID
-                    let queue = session.queue
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("\(fa(queue.cards.count)) کارت در صف")
-                                .font(PersianFont.subheadline).foregroundStyle(Palette.muted)
-                            ProgressView(value: Double(queue.count), total: Double(queue.count + queue.cards.count))
-                                .progressViewStyle(StudyProgressStyle())
-                                .accessibilityLabel("پیشرفت تمرین")
-                        }
-                        if queue.count == 0, !session.plan.newIDs.isEmpty {
-                            ElphyMascotView(mood: .studying, size: 46, animatesAppearance: true)
-                        }
+            ScrollViewReader { scroll in
+                Page {
+                    if !session.plan.cards.isEmpty {
+                        StudyMascotProgress(queue: session.queue)
+                            .id("study-progress")
                     }
-                    if !session.isRevealed, session.lastRating == .again {
-                        HStack {
-                            ElphyMascotView(mood: .encouraging, size: 40, animatesAppearance: true)
-                            Text("اشکالی نداره، دوباره تمرین می‌کنیم.")
-                                .font(PersianFont.subheadline)
-                                .foregroundStyle(Palette.muted)
-                        }
-                    }
-                    CardContent(card: card, revealed: session.isRevealed)
-                        .opacity(reduceMotion || visibleAttempt == attempt ? 1 : 0.86)
-                        .onAppear {
-                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-                                visibleAttempt = attempt
-                            }
-                        }
-                    if session.isRevealed {
-                        let currentAttempt = session.attemptID
-                        Text("چقدر خوب به یاد آوردی؟").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
-                        ratingButtons(attemptID: currentAttempt)
-                        if session.plan.mode != .scheduled {
-                            Text("پاسخ‌ها فقط برای همین تمرین‌اند. زمان مرور بعدی ثابت می‌ماند.")
-                                .font(PersianFont.subheadline)
-                                .foregroundStyle(Palette.muted)
-                        }
-                    } else {
-                        Button("نمایش معنی") {
-                            guard session.attemptID == attempt, !session.isRevealed else { return }
-                            TapCue.reveal.play()
-                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { session.reveal() }
-                        }
-                        .buttonStyle(PrimaryButton())
-                    }
-                } else if session.plan.mode == .difficult && session.plan.cards.isEmpty {
-                    Heading(title: "هنوز واژهٔ دشواری شناسایی نشده.",
-                            subtitle: "واژه‌هایی که در یادآوری آن‌ها مشکل داشته باشی، اینجا ظاهر می‌شوند.")
-                        .modifier(Panel(fill: Palette.tint))
-                    Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ElphyMascotView(mood: completionMood, size: 76, animatesAppearance: completionMood != .sleepy)
-                        Heading(title: "تمرین تمام شد",
-                                subtitle: session.plan.mode == .scheduled
-                                    ? "آفرین! مرورهای بعدی طبق برنامه پیش می‌روند."
-                                    : "آفرین که تمرین کردی! زمان مرورها تغییری نکرد.")
-                        if session.plan.mode == .scheduled {
-                            Text("\(fa(session.newCardsPracticed)) واژهٔ تازه تمرین شد")
-                            Text("\(fa(session.successfulReviews)) واژهٔ مرورشده را به یاد آوردی")
-                        } else {
-                            Text("\(fa(session.queue.successful.count)) واژه را به یاد آوردی")
-                        }
-                        Text("\(fa(session.queue.needsPractice.count)) واژه برای تمرین بیشتر")
-                    }
-                    .modifier(Panel(fill: Palette.tint))
-                    Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
+                    studyContent.id(session.attemptID)
+                }
+                .onChange(of: session.attemptID) { _, _ in
+                    scroll.scrollTo("study-progress", anchor: .top)
                 }
             }
-            .id(session.attemptID)
             .persianNavigationTitle(title)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("بستن") { dismiss() } } }
         }
         .sensoryFeedback(.selection, trigger: session.attemptID)
         .alert("ذخیرهٔ مرور ممکن نشد", isPresented: $failed) { Button("باشه", role: .cancel) {} }
+    }
+
+    private var studyContent: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            if let card = session.currentCard {
+                let attempt = session.attemptID
+                if !session.isRevealed, session.lastRating == .again {
+                    HStack {
+                        ElphyMascotView(mood: .encouraging, size: 40, animatesAppearance: true)
+                        Text("اشکالی نداره، دوباره تمرین می‌کنیم.")
+                            .font(PersianFont.subheadline)
+                            .foregroundStyle(Palette.muted)
+                    }
+                }
+                CardContent(card: card, revealed: session.isRevealed)
+                    .opacity(reduceMotion || visibleAttempt == attempt ? 1 : 0.86)
+                    .onAppear {
+                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                            visibleAttempt = attempt
+                        }
+                    }
+                if session.isRevealed {
+                    let currentAttempt = session.attemptID
+                    Text("چقدر خوب به یاد آوردی؟").font(HeadingFont.section).accessibilityAddTraits(.isHeader)
+                    ratingButtons(attemptID: currentAttempt)
+                    if session.plan.mode != .scheduled {
+                        Text("پاسخ‌ها فقط برای همین تمرین‌اند. زمان مرور بعدی ثابت می‌ماند.")
+                            .font(PersianFont.subheadline)
+                            .foregroundStyle(Palette.muted)
+                    }
+                } else {
+                    Button("نمایش معنی") {
+                        guard session.attemptID == attempt, !session.isRevealed else { return }
+                        TapCue.reveal.play()
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.34)) { session.reveal() }
+                    }
+                    .buttonStyle(PrimaryButton())
+                }
+            } else if session.plan.mode == .difficult && session.plan.cards.isEmpty {
+                Heading(title: "هنوز واژهٔ دشواری شناسایی نشده.",
+                        subtitle: "واژه‌هایی که در یادآوری آن‌ها مشکل داشته باشی، اینجا ظاهر می‌شوند.")
+                    .modifier(Panel(fill: Palette.tint))
+                Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    if session.plan.cards.isEmpty {
+                        ElphyMascotView(mood: completionMood, size: 76, animatesAppearance: completionMood != .sleepy)
+                    }
+                    Heading(title: "تمرین تمام شد",
+                            subtitle: session.plan.mode == .scheduled
+                                ? "آفرین! مرورهای بعدی طبق برنامه پیش می‌روند."
+                                : "آفرین که تمرین کردی! زمان مرورها تغییری نکرد.")
+                    if session.plan.mode == .scheduled {
+                        Text("\(fa(session.newCardsPracticed)) واژهٔ تازه تمرین شد")
+                        Text("\(fa(session.successfulReviews)) واژهٔ مرورشده را به یاد آوردی")
+                    } else {
+                        Text("\(fa(session.queue.successful.count)) واژه را به یاد آوردی")
+                    }
+                    Text("\(fa(session.queue.needsPractice.count)) واژه برای تمرین بیشتر")
+                }
+                .modifier(Panel(fill: Palette.tint))
+                Button("بازگشت به امروز") { dismiss() }.buttonStyle(PrimaryButton())
+            }
+        }
     }
 
     private var completionMood: ElphyMascotView.Mood {
@@ -146,6 +149,55 @@ struct StudyView: View {
                 (rating == .again ? TapCue.retry : .rate).play()
             }
         } catch { failed = true }
+    }
+}
+
+private struct StudyMascotProgress: View {
+    let queue: StudyQueue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let markerSize: CGFloat = 38
+
+    private var fraction: Double {
+        Double(queue.count) / Double(max(1, queue.count + queue.cards.count))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(fa(queue.cards.count)) کارت در صف")
+                .font(PersianFont.subheadline)
+                .foregroundStyle(Palette.muted)
+                .opacity(queue.cards.isEmpty ? 0 : 1)
+                .accessibilityHidden(queue.cards.isEmpty)
+            GeometryReader { geometry in
+                let trackWidth = max(0, geometry.size.width - markerSize)
+                ZStack(alignment: .topLeading) {
+                    ZStack(alignment: .trailing) {
+                        Capsule().fill(Palette.border)
+                        Capsule().fill(Palette.sage)
+                            .frame(width: trackWidth * fraction)
+                    }
+                    .frame(width: trackWidth, height: 6)
+                    .offset(x: markerSize / 2, y: markerSize + 1)
+
+                    ElphyMascotView(mood: queue.cards.isEmpty ? .proud : .studying, size: markerSize)
+                        .scaleEffect(x: -1, y: 1)
+                        .keyframeAnimator(initialValue: CGFloat.zero, trigger: queue.count) { mascot, lift in
+                            mascot.offset(y: reduceMotion ? 0 : lift)
+                        } keyframes: { _ in
+                            CubicKeyframe(-7, duration: 0.16)
+                            CubicKeyframe(0, duration: 0.19)
+                        }
+                        .offset(x: trackWidth * (1 - fraction))
+                }
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: fraction)
+                .environment(\.layoutDirection, .leftToRight)
+            }
+            .frame(height: markerSize + 7)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("پیشرفت تمرین")
+            .accessibilityValue("\(fa(Int(fraction * 100))) درصد")
+        }
     }
 }
 
